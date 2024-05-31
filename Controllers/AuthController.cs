@@ -43,7 +43,6 @@ namespace Controllers
                 {
                     Domain = "idm2.azurewebsites.net",
                     SameSite = SameSiteMode.None,
-                    Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
                 return Ok(loggedInUser);
@@ -82,7 +81,6 @@ namespace Controllers
                 {
                     Domain = "idm2.azurewebsites.net",
                     SameSite = SameSiteMode.None,
-                    Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
 
