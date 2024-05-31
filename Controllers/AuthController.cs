@@ -42,7 +42,9 @@ namespace Controllers
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
                     Domain = ".azurewebsites.net",
-                    SameSite = SameSiteMode.Lax,
+                    SameSite = SameSiteMode.None,
+                    HttpOnly = false,
+                    Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
                 return Ok(loggedInUser);
@@ -80,7 +82,9 @@ namespace Controllers
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
                     Domain = ".azurewebsites.net",
-                    SameSite = SameSiteMode.Lax,
+                    SameSite = SameSiteMode.None,
+                    HttpOnly = false,
+                    Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
 
