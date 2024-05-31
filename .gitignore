@@ -27,7 +27,7 @@ nupkg/
 *.sln.docstates
 
 # appsettings
-*.Local.json
+appsettings.Development.json
 
 # Build results
 [Dd]ebug/

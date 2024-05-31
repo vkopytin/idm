@@ -22,88 +22,88 @@ IdentityModelEventSource.ShowPII = true;
 var apiCorsPolicy = "ApiCorsPolicy";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(name: apiCorsPolicy,
-    builder =>
-    {
-        builder.WithOrigins("http://dev.local:4200", "https://localhost:4200")
-        .AllowAnyHeader()
-        .AllowAnyMethod()
-        .AllowCredentials();
-    });
+  options.AddPolicy(name: apiCorsPolicy,
+  builder =>
+  {
+    builder.WithOrigins("http://dev.local:4200", "http://localhost:4200", "https://idm2.azurewebsites.net")
+      .AllowAnyHeader()
+      .AllowAnyMethod()
+      .AllowCredentials();
+  });
 });
 
 //builder.Services.AddDbContext<ApplicationDbContext>(opt => opt.UseInMemoryDatabase("UsersList"));
 var client = builder.Configuration.CreateMongoClient("MongoDBConnection");
 builder.Services.AddTransient(o =>
 {
-    return new MongoDbContext(client);
+  return new MongoDbContext(client);
 });
 builder.Services.AddControllers();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddAuthorization(options =>
 {
-    var scopes = new[] {
+  var scopes = new[] {
     "read:billing_settings",
     "update:billing_settings",
     "read:customers",
     "read:files"
   };
 
-    Array.ForEach(scopes, scope =>
-      options.AddPolicy(scope,
-        policy => policy.Requirements.Add(
-          new ScopeRequirement(jwtIssuer, scope)
-        )
+  Array.ForEach(scopes, scope =>
+    options.AddPolicy(scope,
+      policy => policy.Requirements.Add(
+        new ScopeRequirement(jwtIssuer, scope)
       )
-    );
+    )
+  );
 }).AddAuthentication(opt =>
 {
-    opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+  opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+  opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(opt =>
 {
-    // for development only
-    opt.RequireHttpsMetadata = false;
-    opt.SaveToken = true;
-    opt.TokenValidationParameters = new TokenValidationParameters
+  // for development only
+  opt.RequireHttpsMetadata = false;
+  opt.SaveToken = true;
+  opt.TokenValidationParameters = new TokenValidationParameters
+  {
+    ValidateIssuerSigningKey = true,
+    IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSecretKey)),
+    ValidateIssuer = true,
+    ValidIssuers = new[] { jwtIssuer },
+    ValidIssuer = jwtIssuer,
+    ValidateAudience = true,
+    ValidAudience = builder.Configuration["JWT:Audience"]
+  };
+  opt.Events = new JwtBearerEvents
+  {
+    OnMessageReceived = context =>
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSecretKey)),
-        ValidateIssuer = true,
-        ValidIssuers = new[] { jwtIssuer },
-        ValidIssuer = jwtIssuer,
-        ValidateAudience = true,
-        ValidAudience = builder.Configuration["JWT:Audience"]
-    };
-    opt.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
-        {
-            context.Token = context.Request.Cookies["token"];
-            return Task.CompletedTask;
-        }
-    };
+      context.Token = context.Request.Cookies["token"];
+      return Task.CompletedTask;
+    }
+  };
 });
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "JWT Auth Sample",
-        Version = "v1"
-    });
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer jhfdkj.jkdsakjdsa.jkdsajk\"",
-    });
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+  c.SwaggerDoc("v1", new OpenApiInfo
+  {
+    Title = "JWT Auth Sample",
+    Version = "v1"
+  });
+  c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme()
+  {
+    Name = "Authorization",
+    Type = SecuritySchemeType.ApiKey,
+    Scheme = "Bearer",
+    BearerFormat = "JWT",
+    In = ParameterLocation.Header,
+    Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer jhfdkj.jkdsakjdsa.jkdsajk\"",
+  });
+  c.AddSecurityRequirement(new OpenApiSecurityRequirement {
         {
             new OpenApiSecurityScheme {
                 Reference = new OpenApiReference {
