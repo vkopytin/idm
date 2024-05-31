@@ -44,6 +44,7 @@ namespace Controllers
                 {
                     Domain = origin.Host,
                     SameSite = SameSiteMode.None,
+                    Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
                 return Ok(loggedInUser);
@@ -83,6 +84,7 @@ namespace Controllers
                 {
                     Domain = origin.Host,
                     SameSite = SameSiteMode.None,
+                    Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
 
