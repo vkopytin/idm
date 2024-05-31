@@ -27,6 +27,7 @@ namespace Controllers
         public async Task<IActionResult> Login([FromBody] LoginUser user)
         {
             var origin = new Uri(Request.Headers["Origin"]);
+            var host = string.Join(".", origin.Host.Split(".").TakeLast(2));
             if (string.IsNullOrEmpty(user.UserName))
             {
                 return BadRequest(new { message = "Email address needs to entered" });
@@ -42,7 +43,7 @@ namespace Controllers
             {
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
-                    Domain = origin.Host,
+                    Domain = host,
                     SameSite = SameSiteMode.None,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
@@ -59,6 +60,7 @@ namespace Controllers
         public async Task<IActionResult> Register([FromBody] RegisterUser user)
         {
             var origin = new Uri(Request.Headers["Origin"]);
+            var host = string.Join(".", origin.Host.Split(".").TakeLast(2));
             if (string.IsNullOrEmpty(user.Name))
             {
                 return BadRequest(new { message = "Name needs to entered" });
@@ -82,7 +84,7 @@ namespace Controllers
             {
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
-                    Domain = origin.Host,
+                    Domain = host,
                     SameSite = SameSiteMode.None,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),

@@ -25,7 +25,7 @@ builder.Services.AddCors(options =>
   options.AddPolicy(name: apiCorsPolicy,
   builder =>
   {
-    builder.WithOrigins("local", "localhost", "azurewebsites.net", "azurewebsites.net:4200")
+    builder.WithOrigins("http://local-dev.azurewebsites.net:4200", "http://localhost:4200", "http://dev.local:4200")
       .AllowAnyHeader()
       .AllowAnyMethod()
       .AllowCredentials();
