@@ -41,6 +41,7 @@ namespace Controllers
             {
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
+                    Domain = "idm2.azurewebsites.net",
                     SameSite = SameSiteMode.None,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
@@ -79,6 +80,7 @@ namespace Controllers
             {
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
+                    Domain = "idm2.azurewebsites.net",
                     SameSite = SameSiteMode.None,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
