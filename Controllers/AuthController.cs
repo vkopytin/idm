@@ -39,9 +39,10 @@ namespace Controllers
 
             if (loggedInUser != null)
             {
+                var origin = new Uri(Request.Headers["Origin"]);
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
-                    Domain = ".azurewebsites.net",
+                    Domain = origin.Host,
                     SameSite = SameSiteMode.None,
                     HttpOnly = false,
                     Secure = true,
@@ -79,9 +80,10 @@ namespace Controllers
 
             if (loggedInUser != null)
             {
+                var origin = new Uri(Request.Headers["Origin"]);
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
-                    Domain = ".azurewebsites.net",
+                    Domain = origin.Host,
                     SameSite = SameSiteMode.None,
                     HttpOnly = false,
                     Secure = true,
