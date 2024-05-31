@@ -44,7 +44,7 @@ namespace Controllers
                 {
                     Domain = origin.Host,
                     SameSite = SameSiteMode.None,
-                    HttpOnly = false,
+                    HttpOnly = true,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
@@ -85,7 +85,7 @@ namespace Controllers
                 {
                     Domain = origin.Host,
                     SameSite = SameSiteMode.None,
-                    HttpOnly = false,
+                    HttpOnly = true,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
