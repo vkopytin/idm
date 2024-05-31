@@ -43,8 +43,7 @@ namespace Controllers
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
                     Domain = origin.Host,
-                    SameSite = SameSiteMode.None,
-                    HttpOnly = true,
+                    SameSite = SameSiteMode.Lax,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
@@ -84,8 +83,7 @@ namespace Controllers
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
                     Domain = origin.Host,
-                    SameSite = SameSiteMode.None,
-                    HttpOnly = true,
+                    SameSite = SameSiteMode.Lax,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
