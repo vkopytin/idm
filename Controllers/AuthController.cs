@@ -39,18 +39,30 @@ namespace Controllers
 
             if (loggedInUser != null)
             {
-                var origin = new Uri(Request.Headers["Origin"]);
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
-                    Domain = origin.Host,
-                    SameSite = SameSiteMode.Lax,
+                    SameSite = SameSiteMode.None,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
+
                 return Ok(loggedInUser);
             }
 
             return BadRequest(new { message = "User login unsuccessful" });
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> LoginForm([FromForm] string username, [FromForm] string password, [FromForm] string redirectTo)
+        {
+            var res = await this.Login(new LoginUser
+            {
+                UserName = username,
+                Password = password
+            });
+
+            return Redirect(redirectTo);
         }
 
         // POST: auth/register
@@ -79,11 +91,9 @@ namespace Controllers
 
             if (loggedInUser != null)
             {
-                var origin = new Uri(Request.Headers["Origin"]);
                 Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
                 {
-                    Domain = origin.Host,
-                    SameSite = SameSiteMode.Lax,
+                    SameSite = SameSiteMode.None,
                     Secure = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
@@ -92,6 +102,20 @@ namespace Controllers
             }
 
             return BadRequest(new { message = "User registration unsuccessful" });
+        }
+
+        [AllowAnonymous]
+        [HttpGet]
+        public IActionResult UserInfoJs()
+        {
+            if (Request.Cookies.Any(pair => string.Compare(pair.Key, "token", StringComparison.InvariantCultureIgnoreCase) == 0))
+            {
+                var token = Request.Cookies["token"];
+
+                return Content($"document.cookie='token={token}';", "application/javascript");
+            }
+
+            return Content("", "application/javascript");
         }
 
         // GET: auth/test
