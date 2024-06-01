@@ -15,10 +15,18 @@ namespace Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly CookieOptions cookieOptions;
 
         public AuthController(IAuthService authService)
         {
             _authService = authService;
+            this.cookieOptions = new CookieOptions()
+            {
+                Domain = ".azurewebsites.net",
+                SameSite = SameSiteMode.Lax,
+                Secure = true,
+                MaxAge = TimeSpan.FromMinutes(30)
+            };
         }
 
         // POST: auth/login
@@ -39,14 +47,7 @@ namespace Controllers
 
             if (loggedInUser != null)
             {
-                Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
-                {
-                    Domain = ".azurewebsites.net",
-                    SameSite = SameSiteMode.None,
-                    Secure = true,
-                    HttpOnly = true,
-                    MaxAge = TimeSpan.FromMinutes(30),
-                });
+                Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
 
                 return Ok(loggedInUser);
             }
@@ -93,14 +94,7 @@ namespace Controllers
 
             if (loggedInUser != null)
             {
-                Response.Cookies.Append("token", loggedInUser.Token, new CookieOptions()
-                {
-                    Domain = ".azurewebsites.net",
-                    SameSite = SameSiteMode.None,
-                    Secure = true,
-                    HttpOnly = true,
-                    MaxAge = TimeSpan.FromMinutes(30),
-                });
+                Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
 
                 return Ok(loggedInUser);
             }
