@@ -44,6 +44,7 @@ namespace Controllers
                     Domain = ".azurewebsites.net",
                     SameSite = SameSiteMode.None,
                     Secure = true,
+                    HttpOnly = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
 
@@ -97,6 +98,7 @@ namespace Controllers
                     Domain = ".azurewebsites.net",
                     SameSite = SameSiteMode.None,
                     Secure = true,
+                    HttpOnly = true,
                     MaxAge = TimeSpan.FromMinutes(30),
                 });
 
