@@ -85,6 +85,12 @@ builder.Services.AddAuthorization(options =>
   {
     OnMessageReceived = context =>
     {
+      var authToken = $"{context.Request.Headers["Authorization"]}";
+      if (authToken.StartsWith("Bearer"))
+      {
+        context.Token = authToken.Substring("Bearer ".Length).Trim();
+        return Task.CompletedTask;
+      }
       context.Token = context.Request.Cookies["token"];
       return Task.CompletedTask;
     }

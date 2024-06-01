@@ -22,7 +22,7 @@ namespace Controllers
             _authService = authService;
             this.cookieOptions = new CookieOptions()
             {
-                Domain = ".azurewebsites.net",
+                Domain = "azurewebsites.net",
                 SameSite = SameSiteMode.Lax,
                 Secure = true,
                 MaxAge = TimeSpan.FromMinutes(30)
