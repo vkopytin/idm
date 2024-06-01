@@ -48,6 +48,14 @@ namespace Controllers
             if (loggedInUser != null)
             {
                 Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
+                Response.Cookies.Append("x-token", loggedInUser.Token, new CookieOptions
+                {
+                    SameSite = SameSiteMode.Lax,
+                    Secure = this.cookieOptions.Secure,
+                    HttpOnly = this.cookieOptions.HttpOnly,
+                    MaxAge = this.cookieOptions.MaxAge,
+                    Domain = ".azurewebsites.net"
+                });
                 Response.Headers.Append("Authorization", loggedInUser.Token);
 
                 return Ok(loggedInUser);
