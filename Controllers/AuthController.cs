@@ -22,9 +22,9 @@ namespace Controllers
             _authService = authService;
             this.cookieOptions = new CookieOptions()
             {
-                Domain = ".azurewebsites.net",
-                SameSite = SameSiteMode.Lax,
+                SameSite = SameSiteMode.None,
                 Secure = true,
+                HttpOnly = false,
                 MaxAge = TimeSpan.FromMinutes(30)
             };
         }
