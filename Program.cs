@@ -33,6 +33,7 @@ builder.Services.AddCors(options =>
       )
       .AllowAnyHeader()
       .AllowAnyMethod()
+      .WithExposedHeaders("Authorization")
       ;
   });
 });

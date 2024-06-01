@@ -48,7 +48,7 @@ namespace Controllers
             if (loggedInUser != null)
             {
                 Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
-                Response.Headers.Append("x-token", loggedInUser.Token);
+                Response.Headers.Append("Authorization", loggedInUser.Token);
 
                 return Ok(loggedInUser);
             }
