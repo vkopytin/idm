@@ -50,7 +50,7 @@ namespace Controllers
                 Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
                 Response.Cookies.Append("x-token", loggedInUser.Token, new CookieOptions
                 {
-                    SameSite = SameSiteMode.Lax,
+                    SameSite = SameSiteMode.None,
                     Secure = this.cookieOptions.Secure,
                     HttpOnly = this.cookieOptions.HttpOnly,
                     MaxAge = this.cookieOptions.MaxAge,
