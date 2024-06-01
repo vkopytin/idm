@@ -35,7 +35,7 @@ namespace Controllers
                 return BadRequest(new { message = "Password needs to entered" });
             }
 
-            var loggedInUser = await _authService.Login(user.UserName, user.Password, "read:billing_settings read:files");
+            var loggedInUser = await _authService.Login(user.UserName, user.Password, "read:user-info read:files");
 
             if (loggedInUser != null)
             {
@@ -87,7 +87,7 @@ namespace Controllers
 
             User registeredUser = await _authService.Register(userToRegister);
 
-            User loggedInUser = await _authService.Login(registeredUser.UserName, user.Password, "read:billing_settings read:files");
+            User loggedInUser = await _authService.Login(registeredUser.UserName, user.Password, "read:user-info read:files");
 
             if (loggedInUser != null)
             {
@@ -145,10 +145,10 @@ namespace Controllers
             return Ok(claims);
         }
         // GET: auth/test-scope
-        [Authorize("read:billing_settings")]
+        [Authorize("read:user-info")]
         [HttpGet]
-        [ActionName("test-scope")]
-        public IActionResult TestScope()
+        [ActionName("user-info")]
+        public IActionResult UserInfo()
         {
             var token = Request.Headers.TryGetValue("Authorization", out var authToken) ? authToken.ToString()
              : Request.Cookies.TryGetValue("token", out var value) ? value

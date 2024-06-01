@@ -48,7 +48,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddAuthorization(options =>
 {
   var scopes = new[] {
-    "read:billing_settings",
+    "read:user-info",
     "update:billing_settings",
     "read:customers",
     "read:files"
@@ -76,7 +76,7 @@ builder.Services.AddAuthorization(options =>
     ValidateIssuerSigningKey = true,
     IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSecretKey)),
     ValidateIssuer = true,
-    ValidIssuers = new[] { jwtIssuer },
+    ValidIssuers = [jwtIssuer],
     ValidIssuer = jwtIssuer,
     ValidateAudience = true,
     ValidAudience = builder.Configuration["JWT:Audience"]

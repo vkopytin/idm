@@ -21,7 +21,7 @@ namespace Auth
             _configuration = configuration;
         }
 
-        public async Task<User> Login(string email, string password, string scope)
+        public async Task<User> Login(string email, string password, string scopes)
         {
             User? user = await _dbContext.Users.FirstOrDefaultAsync(user => user.UserName == email);
 
@@ -35,13 +35,13 @@ namespace Auth
 
             var tokenDescriptor = new SecurityTokenDescriptor
             {
-                Subject = new ClaimsIdentity(new Claim[]
-                {
-                    new Claim(ClaimTypes.Name, user.UserName),
-                    new Claim(ClaimTypes.GivenName, user.Name),
-                    new Claim(ClaimTypes.Role, user.Role),
-                    new Claim("scope", scope)
-                }),
+                Subject = new ClaimsIdentity(
+                [
+                    new (ClaimTypes.Name, user.UserName),
+                    new (ClaimTypes.GivenName, user.Name),
+                    new (ClaimTypes.Role, user.Role),
+                    new ("scopes", scopes)
+                ]),
                 IssuedAt = DateTime.UtcNow,
                 Issuer = _configuration["JWT:Issuer"],
                 Audience = _configuration["JWT:Audience"],
