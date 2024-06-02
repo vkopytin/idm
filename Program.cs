@@ -3,6 +3,7 @@ using Auth.Db;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Logging;
@@ -96,6 +97,11 @@ builder.Services.AddAuthorization(options =>
       return Task.CompletedTask;
     }
   };
+}).AddCookie(options =>
+{
+  options.Cookie.SameSite = SameSiteMode.None;
+  options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+  options.Cookie.IsEssential = true;
 });
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
