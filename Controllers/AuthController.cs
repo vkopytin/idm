@@ -8,175 +8,174 @@ using System.IdentityModel.Tokens.Jwt;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
-namespace Controllers
-{
-    [Route("[controller]/[action]")]
-    [ApiController]
-    public class AuthController : ControllerBase
-    {
-        private readonly IAuthService _authService;
-        private readonly CookieOptions cookieOptions;
+namespace Controllers;
 
-        public AuthController(IAuthService authService)
+[Route("[controller]/[action]")]
+[ApiController]
+public class AuthController : ControllerBase
+{
+    private readonly IAuthService _authService;
+    private readonly CookieOptions cookieOptions;
+
+    public AuthController(IAuthService authService)
+    {
+        _authService = authService;
+        this.cookieOptions = new CookieOptions()
         {
-            _authService = authService;
-            this.cookieOptions = new CookieOptions()
+            SameSite = SameSiteMode.None,
+            Secure = true,
+            HttpOnly = false,
+            MaxAge = TimeSpan.FromMinutes(30)
+        };
+    }
+
+    // POST: auth/login
+    [AllowAnonymous]
+    [HttpPost]
+    public async Task<IActionResult> Login([FromBody] LoginUser user)
+    {
+        if (string.IsNullOrEmpty(user.UserName))
+        {
+            return BadRequest(new { message = "Email address needs to entered" });
+        }
+        else if (string.IsNullOrEmpty(user.Password))
+        {
+            return BadRequest(new { message = "Password needs to entered" });
+        }
+
+        var loggedInUser = await _authService.Login(user.UserName, user.Password, "read:user-info read:files");
+
+        if (loggedInUser != null)
+        {
+            Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
+            Response.Cookies.Append("x-token", loggedInUser.Token, new CookieOptions
             {
                 SameSite = SameSiteMode.None,
-                Secure = true,
-                HttpOnly = false,
-                MaxAge = TimeSpan.FromMinutes(30)
-            };
-        }
-
-        // POST: auth/login
-        [AllowAnonymous]
-        [HttpPost]
-        public async Task<IActionResult> Login([FromBody] LoginUser user)
-        {
-            if (string.IsNullOrEmpty(user.UserName))
-            {
-                return BadRequest(new { message = "Email address needs to entered" });
-            }
-            else if (string.IsNullOrEmpty(user.Password))
-            {
-                return BadRequest(new { message = "Password needs to entered" });
-            }
-
-            var loggedInUser = await _authService.Login(user.UserName, user.Password, "read:user-info read:files");
-
-            if (loggedInUser != null)
-            {
-                Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
-                Response.Cookies.Append("x-token", loggedInUser.Token, new CookieOptions
-                {
-                    SameSite = SameSiteMode.None,
-                    Secure = this.cookieOptions.Secure,
-                    HttpOnly = this.cookieOptions.HttpOnly,
-                    MaxAge = this.cookieOptions.MaxAge,
-                    Domain = ".azurewebsites.net"
-                });
-                Response.Headers.Append("Authorization", loggedInUser.Token);
-
-                return Ok(loggedInUser);
-            }
-
-            return BadRequest(new { message = "User login unsuccessful" });
-        }
-
-        [AllowAnonymous]
-        [HttpPost]
-        public async Task<IActionResult> LoginForm([FromForm] string username, [FromForm] string password, [FromForm] string redirectTo)
-        {
-            var res = await this.Login(new LoginUser
-            {
-                UserName = username,
-                Password = password
+                Secure = this.cookieOptions.Secure,
+                HttpOnly = this.cookieOptions.HttpOnly,
+                MaxAge = this.cookieOptions.MaxAge,
+                Domain = ".azurewebsites.net"
             });
+            Response.Headers.Append("Authorization", loggedInUser.Token);
 
-            return Redirect(redirectTo);
+            return Ok(loggedInUser);
         }
 
-        // POST: auth/register
-        [AllowAnonymous]
-        [HttpPost]
-        public async Task<IActionResult> Register([FromBody] RegisterUser user)
+        return BadRequest(new { message = "User login unsuccessful" });
+    }
+
+    [AllowAnonymous]
+    [HttpPost]
+    public async Task<IActionResult> LoginForm([FromForm] string username, [FromForm] string password, [FromForm] string redirectTo)
+    {
+        var res = await this.Login(new LoginUser
         {
-            if (string.IsNullOrEmpty(user.Name))
-            {
-                return BadRequest(new { message = "Name needs to entered" });
-            }
-            else if (string.IsNullOrEmpty(user.UserName))
-            {
-                return BadRequest(new { message = "User name needs to entered" });
-            }
-            else if (string.IsNullOrEmpty(user.Password))
-            {
-                return BadRequest(new { message = "Password needs to entered" });
-            }
+            UserName = username,
+            Password = password
+        });
 
-            User userToRegister = new(user.UserName, user.Name, user.Password, user.Role);
+        return Redirect(redirectTo);
+    }
 
-            User registeredUser = await _authService.Register(userToRegister);
-
-            User loggedInUser = await _authService.Login(registeredUser.UserName, user.Password, "read:user-info read:files");
-
-            if (loggedInUser != null)
-            {
-                Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
-
-                return Ok(loggedInUser);
-            }
-
-            return BadRequest(new { message = "User registration unsuccessful" });
-        }
-
-        [AllowAnonymous]
-        [HttpGet]
-        public IActionResult UserInfoJs()
+    // POST: auth/register
+    [AllowAnonymous]
+    [HttpPost]
+    public async Task<IActionResult> Register([FromBody] RegisterUser user)
+    {
+        if (string.IsNullOrEmpty(user.Name))
         {
-            if (Request.Cookies.Any(pair => string.Compare(pair.Key, "token", StringComparison.InvariantCultureIgnoreCase) == 0))
-            {
-                var token = Request.Cookies["token"];
-
-                return Content($"document.cookie='token={token}';", "application/javascript");
-            }
-
-            return Content("", "application/javascript");
+            return BadRequest(new { message = "Name needs to entered" });
         }
-
-        // GET: auth/test
-        [Authorize(Roles = "Everyone")]
-        [HttpGet]
-        public IActionResult Test()
+        else if (string.IsNullOrEmpty(user.UserName))
         {
-            var token = Request.Headers.TryGetValue("Authorization", out var authToken) ? authToken.ToString()
-             : Request.Cookies.TryGetValue("token", out var value) ? value
-             : string.Empty;
-
-            if (token.StartsWith("Bearer"))
-            {
-                token = token.Substring("Bearer ".Length).Trim();
-            }
-            var handler = new JwtSecurityTokenHandler();
-
-            JwtSecurityToken jwt = handler.ReadJwtToken(token);
-
-            var claims = new Dictionary<string, string>();
-
-            foreach (var claim in jwt.Claims)
-            {
-                claims.Add(claim.Type, claim.Value);
-            }
-
-            return Ok(claims);
+            return BadRequest(new { message = "User name needs to entered" });
         }
-        // GET: auth/test-scope
-        [Authorize("read:user-info")]
-        [HttpGet]
-        [ActionName("user-info")]
-        public IActionResult UserInfo()
+        else if (string.IsNullOrEmpty(user.Password))
         {
-            var token = Request.Headers.TryGetValue("Authorization", out var authToken) ? authToken.ToString()
-             : Request.Cookies.TryGetValue("token", out var value) ? value
-             : string.Empty;
-
-            if (token.StartsWith("Bearer"))
-            {
-                token = token.Substring("Bearer ".Length).Trim();
-            }
-            var handler = new JwtSecurityTokenHandler();
-
-            JwtSecurityToken jwt = handler.ReadJwtToken(token);
-
-            var claims = new Dictionary<string, string>();
-
-            foreach (var claim in jwt.Claims)
-            {
-                claims.Add(claim.Type, claim.Value);
-            }
-
-            return Ok(claims);
+            return BadRequest(new { message = "Password needs to entered" });
         }
+
+        User userToRegister = new(user.UserName, user.Name, user.Password, user.Role);
+
+        User registeredUser = await _authService.Register(userToRegister);
+
+        User loggedInUser = await _authService.Login(registeredUser.UserName, user.Password, "read:user-info read:files");
+
+        if (loggedInUser != null)
+        {
+            Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
+
+            return Ok(loggedInUser);
+        }
+
+        return BadRequest(new { message = "User registration unsuccessful" });
+    }
+
+    [AllowAnonymous]
+    [HttpGet]
+    public IActionResult UserInfoJs()
+    {
+        if (Request.Cookies.Any(pair => string.Compare(pair.Key, "token", StringComparison.InvariantCultureIgnoreCase) == 0))
+        {
+            var token = Request.Cookies["token"];
+
+            return Content($"document.cookie='token={token}';", "application/javascript");
+        }
+
+        return Content("", "application/javascript");
+    }
+
+    // GET: auth/test
+    [Authorize(Roles = "Everyone")]
+    [HttpGet]
+    public IActionResult Test()
+    {
+        var token = Request.Headers.TryGetValue("Authorization", out var authToken) ? authToken.ToString()
+         : Request.Cookies.TryGetValue("token", out var value) ? value
+         : string.Empty;
+
+        if (token.StartsWith("Bearer"))
+        {
+            token = token.Substring("Bearer ".Length).Trim();
+        }
+        var handler = new JwtSecurityTokenHandler();
+
+        JwtSecurityToken jwt = handler.ReadJwtToken(token);
+
+        var claims = new Dictionary<string, string>();
+
+        foreach (var claim in jwt.Claims)
+        {
+            claims.Add(claim.Type, claim.Value);
+        }
+
+        return Ok(claims);
+    }
+    // GET: auth/test-scope
+    [Authorize("read:user-info")]
+    [HttpGet]
+    [ActionName("user-info")]
+    public IActionResult UserInfo()
+    {
+        var token = Request.Headers.TryGetValue("Authorization", out var authToken) ? authToken.ToString()
+         : Request.Cookies.TryGetValue("token", out var value) ? value
+         : string.Empty;
+
+        if (token.StartsWith("Bearer"))
+        {
+            token = token.Substring("Bearer ".Length).Trim();
+        }
+        var handler = new JwtSecurityTokenHandler();
+
+        JwtSecurityToken jwt = handler.ReadJwtToken(token);
+
+        var claims = new Dictionary<string, string>();
+
+        foreach (var claim in jwt.Claims)
+        {
+            claims.Add(claim.Type, claim.Value);
+        }
+
+        return Ok(claims);
     }
 }
