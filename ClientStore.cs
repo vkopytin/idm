@@ -25,8 +25,8 @@ public class ClientStore
         AllowedScopes = ["openid", "profile"],
         GrantType = GrantTypes.Code,
         IsActive = true,
-        ClientUri = "https://https://account1.azurewebsites.net",
-        RedirectUri = "https://https://account1.azurewebsites.net/signin-oidc"
+        ClientUri = "https://account1.azurewebsites.net",
+        RedirectUri = "https://account1.azurewebsites.net/signin-oidc"
     }
   ];
 }
