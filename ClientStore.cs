@@ -20,7 +20,7 @@ public class ClientStore
     new Client
     {
         ClientName = "platformnet .Net 6",
-        ClientId = "platformnet6",
+        ClientId = "platformnet6 on prod",
         ClientSecret = "some-secret-key-with-long-description-on-prod",
         AllowedScopes = ["openid", "profile"],
         GrantType = GrantTypes.Code,
