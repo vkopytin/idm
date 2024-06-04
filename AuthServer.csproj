@@ -9,19 +9,13 @@
 
   <PropertyGroup>
     <EnableDefaultContentItems>false</EnableDefaultContentItems>
-    <EnableDefaultRazorGenerateItems>false</EnableDefaultRazorGenerateItems>
-    <EnableDefaultRazorComponentItems>false</EnableDefaultRazorComponentItems>
-    <CopyRazorGenerateFilesToPublishDirectory>true</CopyRazorGenerateFilesToPublishDirectory>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Views\_ViewImports.cshtml" />
-    <Content Include="Views\Home\Index.cshtml" />
-    <Content Include="Views\Home\Login.cshtml" />
-    <Content Include="Views\Shared\_Layout.cshtml" />
-
-    <Content Update="Views\**\*.cshtml" CopyToPublishDirectory="PreserveNewest" /> 
-    <Content Update="Areas\MyArea1\Views\**\*.cshtml" CopyToPublishDirectory="PreserveNewest" /> 
+    <!-- Never copy on publish -->
+    <Content Include="Views\**\*.cshtml" CopyToPublishDirectory="Never" />
+    <Content Include="**\*.json" />
+    <Content Include="web.config" />
   </ItemGroup>
 
   <ItemGroup>
