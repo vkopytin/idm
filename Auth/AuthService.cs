@@ -265,23 +265,9 @@ public class AuthService : IAuthService
                     IsOpenId = requestdScopes.Contains("openId") || requestdScopes.Contains("profile"),
                     RedirectUri = oldValue.RedirectUri,
                     RequestedScopes = requestdScopes,
-                    Nonce = nonce
+                    Nonce = nonce,
+                    UserId = userName
                 };
-
-                // ------------------ I suppose the user name and password is correct  -----------------
-                var claims = new List<Claim>();
-
-                if (newValue.IsOpenId)
-                {
-                    if (!string.IsNullOrEmpty(userName))
-                    {
-                        claims.Add(new Claim(ClaimTypes.Name, userName));
-                    }
-                }
-
-                var claimIdentity = new ClaimsIdentity(claims);
-                newValue.Subject = new ClaimsPrincipal(claimIdentity);
-                // ------------------ -----------------------------------------------  -----------------
 
                 var result = _codeIssued.TryUpdate(key, newValue, oldValue);
 
@@ -293,7 +279,7 @@ public class AuthService : IAuthService
         return null;
     }
 
-    public TokenResponse GenerateToken(IHttpContextAccessor httpContextAccessor)
+    public async Task<TokenResponse> GenerateToken(IHttpContextAccessor httpContextAccessor)
     {
         TokenRequest request = new TokenRequest
         {
@@ -316,7 +302,11 @@ public class AuthService : IAuthService
         if (clientCodeChecker == null)
             return new TokenResponse { Error = ErrorTypeEnum.InvalidGrant.GetEnumDescription() };
 
-
+        User? user = await _dbContext.Users.FirstOrDefaultAsync(user => user.UserName == clientCodeChecker.UserId);
+        if (user is null)
+        {
+            return new TokenResponse { Error = ErrorTypeEnum.AccessDenied.GetEnumDescription() };
+        }
         // check if the current client who is one made this authentication request
 
         if (request.ClientId != clientCodeChecker.ClientId)
@@ -340,18 +330,18 @@ public class AuthService : IAuthService
 
             var claims = new List<Claim>()
             {
+                new (ClaimTypes.Name, user.UserName),
+                new (ClaimTypes.GivenName, user.Name),
+                new (ClaimTypes.Role, user.Role),
                 new("sub", "856933325856"),
-                new("given_name", "Volodymyr Kopytin"),
                 new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
                 new("nonce", clientCodeChecker.Nonce),
-                new("scopes", "read:files")
+                new("scopes", "read:files"),
             };
             foreach (var amr in amrs)
             {
                 claims.Add(new Claim("amr", amr)); // authentication method reference
             }
-
-            claims.AddRange(clientCodeChecker.Subject.Claims);
 
             id_token = new JwtSecurityToken(_configuration["JWT:Issuer"], request.ClientId, claims,
                 signingCredentials: credentials,

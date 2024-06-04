@@ -257,9 +257,9 @@ public class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost]
-    public IActionResult Token()
+    public async Task<IActionResult> Token()
     {
-        var result = this._authService.GenerateToken(_httpContextAccessor);
+        var result = await this._authService.GenerateToken(_httpContextAccessor);
 
         if (result.HasError)
         {

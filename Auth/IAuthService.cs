@@ -17,5 +17,5 @@ public interface IAuthService
 
     AuthorizeResponse AuthorizeRequest(IHttpContextAccessor httpContextAccessor, AuthorizationRequest authorizationRequest);
     AuthorizationCode UpdatedClientDataByCode(string key, IList<string> requestdScopes, string userName, string password = null, string nonce = null);
-    TokenResponse GenerateToken(IHttpContextAccessor httpContextAccessor);
+    Task<TokenResponse> GenerateToken(IHttpContextAccessor httpContextAccessor);
 }

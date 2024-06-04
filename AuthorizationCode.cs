@@ -15,6 +15,6 @@ public class AuthorizationCode
   public bool IsOpenId { get; set; }
   public IList<string> RequestedScopes { get; set; }
 
-  public ClaimsPrincipal Subject { get; set; }
+  public string UserId { get; set; }
   public string Nonce { get; set; }
 }
