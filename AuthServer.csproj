@@ -15,7 +15,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Views\_ViewStart.cshtml" />
     <Content Include="Views\_ViewImports.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Home\Login.cshtml" />
