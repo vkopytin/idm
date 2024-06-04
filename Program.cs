@@ -21,6 +21,7 @@ var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new Exception("apps
 IdentityModelEventSource.ShowPII = true;
 
 var apiCorsPolicy = "ApiCorsPolicy";
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddCors(options =>
 {
   options.AddPolicy(name: apiCorsPolicy,
@@ -45,8 +46,7 @@ builder.Services.AddTransient(o =>
 {
   return new MongoDbContext(client);
 });
-builder.Services.AddControllers();
-builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddSingleton<IAuthService, AuthService>();
 builder.Services.AddAuthorization(options =>
 {
   var scopes = new[] {
@@ -71,6 +71,7 @@ builder.Services.AddAuthorization(options =>
 .AddJwtBearer(opt =>
 {
   // for development only
+  opt.Audience = builder.Configuration["JWT:Audience"];
   opt.RequireHttpsMetadata = false;
   opt.SaveToken = true;
   opt.TokenValidationParameters = new TokenValidationParameters
@@ -97,11 +98,6 @@ builder.Services.AddAuthorization(options =>
       return Task.CompletedTask;
     }
   };
-}).AddCookie(options =>
-{
-  options.Cookie.SameSite = SameSiteMode.None;
-  options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
-  options.Cookie.IsEssential = true;
 });
 builder.Services.AddHealthChecks();
 builder.Services.AddEndpointsApiExplorer();
@@ -135,7 +131,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 builder.Services.AddSingleton<IAuthorizationHandler, RequireScopeHandler>();
-
+builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
 var app = builder.Build();
 
 app.UsePathBase("/api");
