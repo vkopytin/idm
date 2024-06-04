@@ -5,9 +5,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-   <RazorCompileOnBuild>false</RazorCompileOnBuild>
-   <RazorCompileOnPublish>false</RazorCompileOnPublish>
-   <UseRazorSourceGenerator>false</UseRazorSourceGenerator>
+    <MvcRazorCompileOnPublish>true</MvcRazorCompileOnPublish>
   </PropertyGroup>
 
   <ItemGroup>
