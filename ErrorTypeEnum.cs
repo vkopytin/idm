@@ -16,6 +16,9 @@ public enum ErrorTypeEnum : byte
   [Description("unsupported_response_type")]
   UnSupportedResponseType,
 
+  [Description("invlaid_code")]
+  InvalidCode,
+
   [Description("invalid_scope")]
   InValidScope,
 

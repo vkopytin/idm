@@ -1,7 +1,9 @@
 using Auth;
+using Idm.Common;
 using Idm.OauthRequest;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace Controllers;
 
@@ -9,12 +11,13 @@ namespace Controllers;
 [AllowAnonymous]
 public class HomeController : Controller
 {
-  private readonly IAuthService _authService;
+  private readonly IAuthService authService;
+  private readonly ILogger logger;
 
-  public HomeController(IAuthService authService)
+  public HomeController(IAuthService authService, ILogger<HomeController> logger)
   {
-    _authService = authService;
-
+    this.authService = authService;
+    this.logger = logger;
   }
 
   [HttpGet]
@@ -44,23 +47,27 @@ public class HomeController : Controller
       return BadRequest(new { message = "Password needs to entered" });
     }
 
-    var loggedInUser = await _authService.Login(loginRequest.UserName, loginRequest.Password, "read:user-info read:files");
+    var (_, loginError) = await authService.Login(loginRequest.UserName, loginRequest.Password, "read:user-info read:files");
 
-    if (loggedInUser is null)
+    if (loginError is not null)
     {
       return RedirectToAction("Error", new { error = "invalid_login" });
     }
 
-    var result = _authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
+    var (result, updateCodeError) = authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
         loginRequest.UserName, nonce: loginRequest.Nonce);
-    if (result != null)
-    {
-      var redirectUri = loginRequest.RedirectUri + "&code=" + loginRequest.Code;
 
-      return Redirect(redirectUri);
+    if (result is null)
+    {
+      logger.LogError("SSO Login Error: {error}, Message: {message}",
+        updateCodeError.Error.GetEnumDescription(),
+        updateCodeError.Message
+      );
+      return RedirectToAction("Error", new { error = "invalid_request" });
     }
 
-    return RedirectToAction("Error", new { error = "invalid_request" });
+    var redirectUri = loginRequest.RedirectUri + "&code=" + loginRequest.Code;
+    return Redirect(redirectUri);
   }
 
 }

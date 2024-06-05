@@ -1,7 +1,7 @@
 ﻿using AppConfiguration;
 using Auth;
-using Auth.Exceptions;
 using Auth.Models;
+using Idm.Common;
 using Idm.Endpoints;
 using Idm.OauthRequest;
 using Microsoft.AspNetCore.Authorization;
@@ -56,28 +56,18 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Password needs to be entered" });
         }
 
-        try
+        var scopes = "read:user-info read:files";
+        var (loggedInUser, err) = await authService.Login(user.UserName, user.Password, scopes);
+
+        if (err is null)
         {
-            var scopes = "read:user-info read:files";
-            var loggedInUser = await authService.Login(user.UserName, user.Password, scopes);
-
-            if (loggedInUser is null)
-            {
-                return BadRequest(new { message = "User login unsuccessful" });
-            }
-
             return Ok(loggedInUser);
         }
-        catch (AuthErrorException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, ex.Message);
 
-            return BadRequest(new { message = "User login unsuccessful" });
-        }
+        logger.LogError("Login error: {err}, Message: {message}",
+            err.Error.GetEnumDescription(), err.Message
+        );
+        return BadRequest(new { message = "User login unsuccessful" });
     }
 
     [AllowAnonymous]
@@ -89,6 +79,11 @@ public class AuthController : ControllerBase
             UserName = username,
             Password = password
         });
+
+        if (string.IsNullOrEmpty(redirectTo))
+        {
+            return res;
+        }
 
         return Redirect(redirectTo);
     }
@@ -115,23 +110,18 @@ public class AuthController : ControllerBase
 
         var registeredUser = await authService.Register(userToRegister);
 
-        try
-        {
-            var scopes = "read:user-info read:files";
-            var loggedInUser = await authService.Login(registeredUser.UserName, user.Password, scopes);
+        var scopes = "read:user-info read:files";
+        var (loggedInUser, err) = await authService.Login(registeredUser.UserName, user.Password, scopes);
 
+        if (err is null)
+        {
             return Ok(loggedInUser);
         }
-        catch (AuthErrorException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, ex.Message);
 
-            return BadRequest(new { message = "User registration unsuccessful" });
-        }
+        logger.LogError("Register user error: {err}, Message: {message}",
+            err.Error.GetEnumDescription(), err.Message
+        );
+        return BadRequest(new { message = "User registration unsuccessful" });
     }
 
     [AllowAnonymous]
@@ -250,11 +240,11 @@ public class AuthController : ControllerBase
     [HttpGet]
     public IActionResult Authorize([FromQuery] AuthorizationRequest authorizationRequest)
     {
-        var result = authService.AuthorizeRequest(httpContextAccessor, authorizationRequest);
+        var (result, err) = authService.AuthorizeRequest(httpContextAccessor, authorizationRequest);
 
-        if (result.HasError)
+        if (result is null)
         {
-            return RedirectToAction("Error", new { error = result.Error });
+            return RedirectToAction("Error", new { error = err!.Error });
         }
 
         var loginModel = new OpenIdConnectLoginRequest
@@ -281,10 +271,13 @@ public class AuthController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Token()
     {
-        var result = await authService.GenerateToken(httpContextAccessor);
+        var (result, err) = await authService.GenerateToken(httpContextAccessor);
 
-        if (result.HasError)
+        if (result is null)
         {
+            logger.LogError("Make token error: {error}. Message: {message}",
+                err?.Error.GetEnumDescription(), err?.Message
+            );
             return Ok("0");
         }
 
