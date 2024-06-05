@@ -40,4 +40,9 @@ public class ClientStore
       RedirectUri: "https://local-dev.azurewebsites.net/signin-oidc"
     )
   ];
+
+  public Client? findByClientId(string clientId)
+  {
+    return Clients.Where(x => x.ClientId == clientId).FirstOrDefault();
+  }
 }

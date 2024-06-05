@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace Auth;
 
 using AppConfiguration;
+using Auth.Exceptions;
 using BCrypt.Net;
 using Idm.Auth.Models;
 using Idm.Common;
@@ -20,24 +21,25 @@ using Microsoft.AspNetCore.Http;
 
 public class AuthService : IAuthService
 {
-    private readonly ConcurrentDictionary<string, AuthorizationCode> _codeIssued = new ConcurrentDictionary<string, AuthorizationCode>();
-    private readonly ClientStore _clientStore = new ClientStore();
-    private readonly MongoDbContext _dbContext;
+    private readonly ConcurrentDictionary<string, AuthorizationCode> issuedCodes = new ConcurrentDictionary<string, AuthorizationCode>();
+    private readonly ClientStore clientStore = new ClientStore();
+    private readonly MongoDbContext dbContext;
     private readonly JwtOptions jwtOptions;
 
     public AuthService(MongoDbContext dbContext, JwtOptions options)
     {
-        _dbContext = dbContext;
+        this.dbContext = dbContext;
         jwtOptions = options;
     }
 
     public async Task<User> Login(string email, string password, string scopes)
     {
-        User? user = await _dbContext.Users.FirstOrDefaultAsync(user => user.UserName == email);
+        var user = await dbContext.Users.FirstOrDefaultAsync(user => user.UserName == email)
+          ?? throw new AuthErrorException("login not found");
 
-        if (user == null || BCrypt.Verify(password, user.Password) == false)
+        if (BCrypt.Verify(password, user.Password) == false)
         {
-            return null; //returning null intentionally to show that login was unsuccessful
+            throw new AuthErrorException("wrong password");
         }
 
         var tokenHandler = new JwtSecurityTokenHandler();
@@ -69,8 +71,8 @@ public class AuthService : IAuthService
     public async Task<User> Register(User user)
     {
         user.Password = BCrypt.HashPassword(user.Password);
-        _dbContext.Users.Add(user);
-        await _dbContext.SaveChangesAsync();
+        dbContext.Users.Add(user);
+        await dbContext.SaveChangesAsync();
 
         return user;
     }
@@ -80,7 +82,7 @@ public class AuthService : IAuthService
 
     public string GenerateAuthorizationCode(string clientId, IList<string> requestedScope)
     {
-        var client = _clientStore.Clients.Where(x => x.ClientId == clientId).FirstOrDefault();
+        var client = clientStore.findByClientId(clientId);
 
         if (client != null)
         {
@@ -96,17 +98,18 @@ public class AuthService : IAuthService
             );
 
             // then store the code is the Concurrent Dictionary
-            _codeIssued[code] = authoCode;
+            issuedCodes[code] = authoCode;
 
             return code;
         }
+
         return null;
 
     }
 
     public AuthorizationCode GetClientDataByCode(string key)
     {
-        if (_codeIssued.TryGetValue(key, out var authorizationCode))
+        if (issuedCodes.TryGetValue(key, out var authorizationCode))
         {
             return authorizationCode;
         }
@@ -115,7 +118,7 @@ public class AuthService : IAuthService
 
     public AuthorizationCode RemoveClientDataByCode(string key)
     {
-        _codeIssued.TryRemove(key, out var authorizationCode);
+        issuedCodes.TryRemove(key, out var authorizationCode);
         return authorizationCode;
     }
 
@@ -129,12 +132,12 @@ public class AuthService : IAuthService
             };
         }
 
-        var client = VerifyClientById(authorizationRequest.client_id);
-        if (!client.IsSuccess)
+        var checkClientResult = VerifyClientById(authorizationRequest.client_id);
+        if (!checkClientResult.IsSuccess)
         {
             return new()
             {
-                Error = client.ErrorDescription
+                Error = checkClientResult.ErrorDescription
             };
         }
 
@@ -164,7 +167,7 @@ public class AuthService : IAuthService
 
         var scopes = authorizationRequest.scope.Split(' ');
 
-        var clientScopes = from m in client.Client.AllowedScopes
+        var clientScopes = from m in checkClientResult.Client.AllowedScopes
                            where scopes.Contains(m)
                            select m;
 
@@ -173,11 +176,11 @@ public class AuthService : IAuthService
             return new()
             {
                 Error = ErrorTypeEnum.InValidScope.GetEnumDescription(),
-                ErrorDescription = "scopes are invalids"
+                ErrorDescription = "scopes are invalid"
             };
         }
 
-        string code = this.GenerateAuthorizationCode(authorizationRequest.client_id, clientScopes.ToList());
+        string code = GenerateAuthorizationCode(authorizationRequest.client_id, clientScopes.ToList());
         if (code == null)
         {
             return new()
@@ -188,7 +191,7 @@ public class AuthService : IAuthService
 
         return new()
         {
-            RedirectUri = client.Client.RedirectUri + "?response_type=code" + "&state=" + authorizationRequest.state,
+            RedirectUri = checkClientResult.Client.RedirectUri + "?response_type=code" + "&state=" + authorizationRequest.state,
             Code = code,
             State = authorizationRequest.state,
             RequestedScopes = clientScopes.ToList(),
@@ -200,7 +203,7 @@ public class AuthService : IAuthService
     {
         if (!string.IsNullOrWhiteSpace(clientId))
         {
-            var client = _clientStore.Clients.Where(x => x.ClientId.Equals(clientId, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+            var client = clientStore.Clients.Where(x => x.ClientId.Equals(clientId, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
 
             if (client != null)
             {
@@ -247,7 +250,7 @@ public class AuthService : IAuthService
         if (oldValue != null)
         {
             // check the requested scopes with the one that are stored in the Client Store 
-            var client = _clientStore.Clients.Where(x => x.ClientId == oldValue.ClientId).FirstOrDefault();
+            var client = clientStore.Clients.Where(x => x.ClientId == oldValue.ClientId).FirstOrDefault();
 
             if (client != null)
             {
@@ -268,7 +271,7 @@ public class AuthService : IAuthService
                     UserId = userName
                 };
 
-                var result = _codeIssued.TryUpdate(key, newValue, oldValue);
+                var result = issuedCodes.TryUpdate(key, newValue, oldValue);
 
                 if (result)
                     return newValue;
@@ -296,20 +299,20 @@ public class AuthService : IAuthService
             return new() { Error = ErrorTypeEnum.InvalidGrant.GetEnumDescription() };
         }
 
-        var checkClientResult = this.VerifyClientById(request.ClientId, true, request.ClientSecret);
+        var checkClientResult = VerifyClientById(request.ClientId, true, request.ClientSecret);
         if (!checkClientResult.IsSuccess)
         {
             return new() { Error = checkClientResult.Error, ErrorDescription = checkClientResult.ErrorDescription };
         }
 
         // check code from the Concurrent Dictionary
-        var clientCodeChecker = this.GetClientDataByCode(request.Code);
+        var clientCodeChecker = GetClientDataByCode(request.Code);
         if (clientCodeChecker == null)
         {
             return new() { Error = ErrorTypeEnum.InvalidGrant.GetEnumDescription() };
         }
 
-        var user = await _dbContext.Users.FirstOrDefaultAsync(user => user.UserName == clientCodeChecker.UserId);
+        var user = await dbContext.Users.FirstOrDefaultAsync(user => user.UserName == clientCodeChecker.UserId);
         if (user is null)
         {
             return new() { Error = ErrorTypeEnum.AccessDenied.GetEnumDescription() };
@@ -366,7 +369,7 @@ public class AuthService : IAuthService
                int.Parse("5")));
 
         // here remoce the code from the Concurrent Dictionary
-        this.RemoveClientDataByCode(request.Code);
+        RemoveClientDataByCode(request.Code);
 
         return new()
         {

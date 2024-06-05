@@ -51,7 +51,7 @@ public class HomeController : Controller
       return RedirectToAction("Error", new { error = "invalid_login" });
     }
 
-    var result = this._authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
+    var result = _authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
         loginRequest.UserName, nonce: loginRequest.Nonce);
     if (result != null)
     {

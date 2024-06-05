@@ -1,12 +1,13 @@
 ﻿using AppConfiguration;
 using Auth;
+using Auth.Exceptions;
 using Auth.Models;
 using Idm.Endpoints;
 using Idm.OauthRequest;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Primitives;
+using Microsoft.Extensions.Logging;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace Controllers;
@@ -15,17 +16,23 @@ namespace Controllers;
 [ApiController]
 public class AuthController : ControllerBase
 {
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IAuthService _authService;
+    private readonly IHttpContextAccessor httpContextAccessor;
+    private readonly IAuthService authService;
     private readonly CookieOptions cookieOptions;
     private readonly JwtOptions jwtOptions;
+    private readonly ILogger logger;
 
-    public AuthController(IAuthService authService, IHttpContextAccessor httpContextAccessor, JwtOptions jwtOptions)
+    public AuthController(
+        IAuthService authService,
+        IHttpContextAccessor httpContextAccessor,
+        JwtOptions jwtOptions,
+        ILogger<AuthController> logger)
     {
-        _authService = authService;
-        _httpContextAccessor = httpContextAccessor;
+        this.authService = authService;
+        this.httpContextAccessor = httpContextAccessor;
         this.jwtOptions = jwtOptions;
-        this.cookieOptions = new CookieOptions()
+        this.logger = logger;
+        cookieOptions = new CookieOptions()
         {
             SameSite = SameSiteMode.None,
             Secure = true,
@@ -41,39 +48,43 @@ public class AuthController : ControllerBase
     {
         if (string.IsNullOrEmpty(user.UserName))
         {
-            return BadRequest(new { message = "Email address needs to entered" });
-        }
-        else if (string.IsNullOrEmpty(user.Password))
-        {
-            return BadRequest(new { message = "Password needs to entered" });
+            return BadRequest(new { message = "Email address needs to be entered" });
         }
 
-        var loggedInUser = await _authService.Login(user.UserName, user.Password, "read:user-info read:files");
-
-        if (loggedInUser != null)
+        if (string.IsNullOrEmpty(user.Password))
         {
-            Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
-            Response.Cookies.Append("x-token", loggedInUser.Token, new CookieOptions
+            return BadRequest(new { message = "Password needs to be entered" });
+        }
+
+        try
+        {
+            var scopes = "read:user-info read:files";
+            var loggedInUser = await authService.Login(user.UserName, user.Password, scopes);
+
+            if (loggedInUser is null)
             {
-                SameSite = SameSiteMode.None,
-                Secure = this.cookieOptions.Secure,
-                HttpOnly = this.cookieOptions.HttpOnly,
-                MaxAge = this.cookieOptions.MaxAge,
-                Domain = ".azurewebsites.net"
-            });
-            Response.Headers.Append("Authorization", loggedInUser.Token);
+                return BadRequest(new { message = "User login unsuccessful" });
+            }
 
             return Ok(loggedInUser);
         }
+        catch (AuthErrorException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, ex.Message);
 
-        return BadRequest(new { message = "User login unsuccessful" });
+            return BadRequest(new { message = "User login unsuccessful" });
+        }
     }
 
     [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> LoginForm([FromForm] string username, [FromForm] string password, [FromForm] string redirectTo)
     {
-        var res = await this.Login(new LoginUser
+        var res = await Login(new LoginUser
         {
             UserName = username,
             Password = password
@@ -100,20 +111,27 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Password needs to entered" });
         }
 
-        User userToRegister = new(user.UserName, user.Name, user.Password, user.Role);
+        var userToRegister = new User(user.UserName, user.Name, user.Password, user.Role);
 
-        User registeredUser = await _authService.Register(userToRegister);
+        var registeredUser = await authService.Register(userToRegister);
 
-        User loggedInUser = await _authService.Login(registeredUser.UserName, user.Password, "read:user-info read:files");
-
-        if (loggedInUser != null)
+        try
         {
-            Response.Cookies.Append("token", loggedInUser.Token, this.cookieOptions);
+            var scopes = "read:user-info read:files";
+            var loggedInUser = await authService.Login(registeredUser.UserName, user.Password, scopes);
 
             return Ok(loggedInUser);
         }
+        catch (AuthErrorException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, ex.Message);
 
-        return BadRequest(new { message = "User registration unsuccessful" });
+            return BadRequest(new { message = "User registration unsuccessful" });
+        }
     }
 
     [AllowAnonymous]
@@ -232,7 +250,7 @@ public class AuthController : ControllerBase
     [HttpGet]
     public IActionResult Authorize([FromQuery] AuthorizationRequest authorizationRequest)
     {
-        var result = this._authService.AuthorizeRequest(_httpContextAccessor, authorizationRequest);
+        var result = authService.AuthorizeRequest(httpContextAccessor, authorizationRequest);
 
         if (result.HasError)
         {
@@ -263,7 +281,7 @@ public class AuthController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Token()
     {
-        var result = await this._authService.GenerateToken(_httpContextAccessor);
+        var result = await authService.GenerateToken(httpContextAccessor);
 
         if (result.HasError)
         {
