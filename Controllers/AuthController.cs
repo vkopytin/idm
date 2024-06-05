@@ -1,16 +1,13 @@
-﻿using Auth;
+﻿using AppConfiguration;
+using Auth;
 using Auth.Models;
 using Idm.Endpoints;
 using Idm.OauthRequest;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Primitives;
 using System.IdentityModel.Tokens.Jwt;
-using System.Net.Http.Json;
-
-// For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
 namespace Controllers;
 
@@ -21,13 +18,13 @@ public class AuthController : ControllerBase
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthService _authService;
     private readonly CookieOptions cookieOptions;
-    private readonly IConfiguration _configuration;
+    private readonly JwtOptions jwtOptions;
 
-    public AuthController(IAuthService authService, IHttpContextAccessor httpContextAccessor, IConfiguration configuration)
+    public AuthController(IAuthService authService, IHttpContextAccessor httpContextAccessor, JwtOptions jwtOptions)
     {
         _authService = authService;
         _httpContextAccessor = httpContextAccessor;
-        _configuration = configuration;
+        this.jwtOptions = jwtOptions;
         this.cookieOptions = new CookieOptions()
         {
             SameSite = SameSiteMode.None,
@@ -192,36 +189,41 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public IActionResult GetConfiguration()
     {
-        var jwtIssuer = _configuration["JWT:Issuer"];
-        var response = new DiscoveryResponse
-        {
-            issuer = jwtIssuer,
-            authorization_endpoint = $"{jwtIssuer}/Auth/Authorize",
-            token_endpoint = $"{jwtIssuer}/Auth/Token",
-            token_endpoint_auth_methods_supported = ["client_secret_basic", "private_key_jwt"],
-            token_endpoint_auth_signing_alg_values_supported = ["RS256", "ES256"],
-
-            acr_values_supported = ["urn:mace:incommon:iap:silver", "urn:mace:incommon:iap:bronze"],
-            response_types_supported = ["code", "code id_token", "id_token", "token id_token"],
-            subject_types_supported = ["public", "pairwise"],
-
-            userinfo_encryption_enc_values_supported = ["A128CBC-HS256", "A128GCM"],
-            id_token_signing_alg_values_supported = ["RS256", "ES256", "HS256"],
-            id_token_encryption_alg_values_supported = ["RSA1_5", "A128KW"],
-            id_token_encryption_enc_values_supported = ["A128CBC-HS256", "A128GCM"],
-            request_object_signing_alg_values_supported = ["none", "RS256", "ES256"],
-            display_values_supported = ["page", "popup"],
-            claim_types_supported = ["normal", "distributed"],
-
-            scopes_supported = ["openid", "profile", "email", "address", "phone", "offline_access"],
-            claims_supported = [ "sub", "iss", "auth_time", "acr", "name", "given_name",
-                    "family_name", "nickname", "profile", "picture", "website", "email", "email_verified",
-                    "locale", "zoneinfo" ],
-            claims_parameter_supported = true,
-            service_documentation = $"{jwtIssuer}/connect/service_documentation.html",
-            ui_locales_supported = ["en-US", "en-GB", "en-CA", "fr-FR", "fr-CA"]
-
-        };
+        var jwtIssuer = jwtOptions.Issuer;
+        var response = new DiscoveryResponse(
+            issuer: jwtIssuer,
+            authorization_endpoint: $"{jwtIssuer}/Auth/Authorize",
+            token_endpoint: $"{jwtIssuer}/Auth/Token",
+            token_endpoint_auth_methods_supported: ["client_secret_basic", "private_key_jwt"],
+            token_endpoint_auth_signing_alg_values_supported: ["RS256", "ES256"],
+            userinfo_endpoint: null,
+            check_session_iframe: null,
+            end_session_endpoint: null,
+            jwks_uri: null,
+            registration_endpoint: null,
+            scopes_supported: ["openid", "profile", "email", "address", "phone", "offline_access"],
+            response_types_supported: ["code", "code id_token", "id_token", "token id_token"],
+            acr_values_supported: ["urn:mace:incommon:iap:silver", "urn:mace:incommon:iap:bronze"],
+            subject_types_supported: ["public", "pairwise"],
+            userinfo_signing_alg_values_supported: null,
+            userinfo_encryption_alg_values_supported: null,
+            userinfo_encryption_enc_values_supported: ["A128CBC-HS256", "A128GCM"],
+            id_token_signing_alg_values_supported: ["RS256", "ES256", "HS256"],
+            id_token_encryption_alg_values_supported: ["RSA1_5", "A128KW"],
+            id_token_encryption_enc_values_supported: ["A128CBC-HS256", "A128GCM"],
+            request_object_signing_alg_values_supported: ["none", "RS256", "ES256"],
+            display_values_supported: ["page", "popup"],
+            claim_types_supported: ["normal", "distributed"],
+            claims_supported:
+            [
+                "sub", "iss", "auth_time", "acr", "name", "given_name",
+                "family_name", "nickname", "profile", "picture", "website", "email", "email_verified",
+                "locale", "zoneinfo"
+            ],
+            claims_parameter_supported: true,
+            service_documentation: $"{jwtIssuer}/connect/service_documentation.html",
+            ui_locales_supported: ["en-US", "en-GB", "en-CA", "fr-FR", "fr-CA"]
+        );
 
         return Ok(response);
     }
@@ -238,12 +240,14 @@ public class AuthController : ControllerBase
         }
 
         var loginModel = new OpenIdConnectLoginRequest
-        {
-            RedirectUri = result.RedirectUri,
-            Code = result.Code,
-            RequestedScopes = result.RequestedScopes,
-            Nonce = result.Nonce
-        };
+        (
+            UserName: null,
+            Password: null,
+            RedirectUri: result.RedirectUri,
+            Code: result.Code,
+            RequestedScopes: result.RequestedScopes,
+            Nonce: result.Nonce
+        );
 
         return RedirectToAction("Login", "Home", loginModel);
     }

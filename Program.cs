@@ -1,26 +1,27 @@
-﻿using Auth;
+﻿using AppConfiguration;
+using Auth;
 using Auth.Db;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Logging;
-using Microsoft.IdentityModel.Protocols;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+
+IdentityModelEventSource.ShowPII = true;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var jwtSecretKey = builder.Configuration["JWT:SecretKey"] ?? throw new Exception("appsettings config error: JWT secret key is null");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new Exception("appsettings config error: JWT issues is not specified");
-
-IdentityModelEventSource.ShowPII = true;
-
 var apiCorsPolicy = "ApiCorsPolicy";
+
+builder.Services.AddSingleton(p => p.GetRequiredService<IConfiguration>().GetSection("Jwt")
+  .Get<JwtOptions>() ?? throw new Exception("appsetings missing JWT section")
+);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddCors(options =>
 {
@@ -82,7 +83,7 @@ builder.Services.AddAuthorization(options =>
     ValidIssuers = [jwtIssuer],
     ValidIssuer = jwtIssuer,
     ValidateAudience = true,
-    ValidAudience = builder.Configuration["JWT:Audience"]
+    ValidAudiences = [builder.Configuration["JWT:Audience"]],
   };
   opt.Events = new JwtBearerEvents
   {

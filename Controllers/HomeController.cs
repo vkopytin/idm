@@ -55,9 +55,11 @@ public class HomeController : Controller
         loginRequest.UserName, nonce: loginRequest.Nonce);
     if (result != null)
     {
-      loginRequest.RedirectUri = loginRequest.RedirectUri + "&code=" + loginRequest.Code;
-      return Redirect(loginRequest.RedirectUri);
+      var redirectUri = loginRequest.RedirectUri + "&code=" + loginRequest.Code;
+
+      return Redirect(redirectUri);
     }
+
     return RedirectToAction("Error", new { error = "invalid_request" });
   }
 

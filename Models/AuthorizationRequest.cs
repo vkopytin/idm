@@ -1,18 +1,17 @@
 namespace Idm.OauthRequest;
 
-public class AuthorizationRequest
-{
-  public AuthorizationRequest() { }
+public record AuthorizationRequest
+(
   /// <summary>
   /// Response Type, is required
   /// </summary>
-  public string response_type { get; set; }
+  string response_type,
 
   /// <summary>
   /// Client Id, is required
   /// </summary>
 
-  public string client_id { get; set; }
+  string client_id,
 
   /// <summary>
   /// Redirect Uri, is optional
@@ -20,16 +19,16 @@ public class AuthorizationRequest
   /// [RFC3986] Section 4.3
   /// </summary>
 
-  public string redirect_uri { get; set; }
+  string redirect_uri,
 
   /// <summary>
   /// Optional
   /// </summary>
-  public string scope { get; set; }
+  string scope,
 
   /// <summary>
   /// Return the state in the result 
   /// if it was present in the client authorization request
   /// </summary>
-  public string state { get; set; }
-}
+  string state
+);
