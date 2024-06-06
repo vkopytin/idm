@@ -174,6 +174,7 @@ public class AuthService : IAuthService
 
     public async Task<(TokenResponse?, AuthError?)> GenerateToken(TokenRequest request)
     {
+        var tokenExpirationInMinutes = 5;
         if (request.Code == null)
         {
             return (null, new(InvalidGrant));
@@ -223,6 +224,7 @@ public class AuthService : IAuthService
                 new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
                 new("nonce", clientCodeChecker.Nonce),
                 new("scopes", "read:files"),
+                new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
             };
             foreach (var amr in amrs)
             {
@@ -231,9 +233,7 @@ public class AuthService : IAuthService
 
             id_token = new JwtSecurityToken(jwtOptions.Issuer, request.ClientId, claims,
                 signingCredentials: credentials,
-                expires: DateTime.UtcNow.AddMinutes(
-                   int.Parse("5")
-                )
+                expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes)
             );
         }
 
@@ -245,10 +245,10 @@ public class AuthService : IAuthService
             new("iss", client.ClientUri),
             new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
             new("scopes", "read:files"),
+            new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
         ];
         var access_token = new JwtSecurityToken(jwtOptions.Issuer, request.ClientId, claims_at, signingCredentials: credentials_at,
-            expires: DateTime.UtcNow.AddMinutes(
-               int.Parse("5")));
+            expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes));
 
         // here remoce the code from the Concurrent Dictionary
         RemoveClientDataByCode(request.Code);
