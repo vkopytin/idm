@@ -12,7 +12,7 @@ public static class ExtensionMethods
 
     var attributes = fi?.GetCustomAttributes(typeof(DescriptionAttribute), false) as DescriptionAttribute[];
 
-    if (attributes != null && attributes.Any())
+    if (attributes != null && attributes.Length != 0)
     {
       return attributes.First().Description;
     }

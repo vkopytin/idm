@@ -6,7 +6,7 @@ public record TokenRequest(
   [FromForm(Name ="client_id")]
   string ClientId,
   [FromForm(Name = "client_secret")]
-  string ClientSecret,
+  string? ClientSecret,
   [FromForm(Name = "code")]
   string Code,
   [FromForm(Name = "grant_type")]

@@ -145,9 +145,9 @@ public class AuthService : IAuthService
             return (null, new AuthError(InvalidRequest));
         }
 
-        var clientScope = (from m in client.AllowedScopes
-                           where requestdScopes.Contains(m)
-                           select m).ToList();
+        var clientScope = from m in client.AllowedScopes
+                          where requestdScopes.Contains(m)
+                          select m;
 
         if (!clientScope.Any())
         {

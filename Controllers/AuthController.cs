@@ -276,7 +276,7 @@ public class AuthController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Token([FromForm] TokenRequest request)
     {
-        string[] checkFields = ["client_id", "client_secret", "code", "grant_type", "redirect_uri", "code_verifier"];
+        string[] checkFields = ["client_id", "code", "grant_type", "redirect_uri", "code_verifier"];
         var form = httpContextAccessor.HttpContext?.Request.Form;
         foreach (var fieldName in checkFields)
         {
