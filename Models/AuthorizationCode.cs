@@ -6,10 +6,10 @@ public record AuthorizationCode
   string ClientSecret,
   string RedirectUri,
 
-  IList<string> RequestedScopes,
+  string[] RequestedScopes,
   DateTime CreationTime,
 
+  string Nonce,
   string? UserId = null,
-  string? Nonce = null,
   bool IsOpenId = true
 );

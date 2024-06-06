@@ -240,7 +240,12 @@ public class AuthController : ControllerBase
     [HttpGet]
     public IActionResult Authorize([FromQuery] AuthorizationRequest authorizationRequest)
     {
-        var (result, err) = authService.AuthorizeRequest(httpContextAccessor, authorizationRequest);
+        if (Request.IsHttps == false)
+        {
+            return RedirectToAction("Error", new { error = "request is not secure, MUST be TLS" });
+        }
+
+        var (result, err) = authService.AuthorizeRequest(authorizationRequest);
 
         if (result is null)
         {
@@ -269,9 +274,19 @@ public class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpPost]
-    public async Task<IActionResult> Token()
+    public async Task<IActionResult> Token([FromForm] TokenRequest request)
     {
-        var (result, err) = await authService.GenerateToken(httpContextAccessor);
+        string[] checkFields = ["client_id", "client_secret", "code", "grant_type", "redirect_uri", "code_verifier"];
+        var form = httpContextAccessor.HttpContext?.Request.Form;
+        foreach (var fieldName in checkFields)
+        {
+            if (string.IsNullOrEmpty(form?[fieldName]))
+            {
+                return BadRequest(new { message = $"Field: '{fieldName}' is missing" });
+            }
+        }
+
+        var (result, err) = await authService.GenerateToken(request);
 
         if (result is null)
         {

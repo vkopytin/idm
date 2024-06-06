@@ -17,7 +17,6 @@ using Idm.Auth.Models;
 using Idm.Common;
 using Idm.OauthRequest;
 using Idm.OauthResponse;
-using Microsoft.AspNetCore.Http;
 using static Idm.OauthResponse.ErrorTypeEnum;
 
 public class AuthService : IAuthService
@@ -82,13 +81,8 @@ public class AuthService : IAuthService
         return user;
     }
 
-    public (AuthorizeResponse?, AuthError?) AuthorizeRequest(IHttpContextAccessor httpContextAccessor, AuthorizationRequest authorizationRequest)
+    public (AuthorizeResponse?, AuthError?) AuthorizeRequest(AuthorizationRequest authorizationRequest)
     {
-        if (httpContextAccessor == null)
-        {
-            return (null, new(ServerError));
-        }
-
         var (client, err) = VerifyClientById(authorizationRequest.client_id);
         if (client is null)
         {
@@ -100,7 +94,7 @@ public class AuthService : IAuthService
             return (null, new(InvalidRequest, "response_type is required or is not valid"));
         }
 
-        if (!authorizationRequest.redirect_uri.IsRedirectUriStartWithHttps() && !httpContextAccessor.HttpContext.Request.IsHttps)
+        if (!authorizationRequest.redirect_uri.IsRedirectUriStartWithHttps())
         {
             return (null, new(InvalidRequest, "redirect_url is not secure, MUST be TLS"));
         }
@@ -116,7 +110,7 @@ public class AuthService : IAuthService
             return (null, new(InValidScope, "scopes are invalid"));
         }
 
-        var code = GenerateAuthorizationCode(authorizationRequest.client_id, clientScopes.ToList());
+        var code = GenerateAuthorizationCode(client, clientScopes.ToArray(), authorizationRequest.nonce);
         if (code == null)
         {
             return (null, new(TemporarilyUnAvailable));
@@ -127,15 +121,15 @@ public class AuthService : IAuthService
             Code: code,
             State: authorizationRequest.state,
             RequestedScopes: clientScopes.ToList(),
-            Nonce: httpContextAccessor.HttpContext?.Request.Query["nonce"].ToString()
+            Nonce: authorizationRequest.nonce
         ), null);
     }
 
     // Before updated the Concurrent Dictionary I have to Process User Sign In,
     // and check the user credienail first
     // But here I merge this process here inside update Concurrent Dictionary method
-    public (AuthorizationCode?, AuthError?) UpdatedClientDataByCode(string key, IList<string> requestdScopes,
-        string userName, string password = null, string nonce = null)
+    public (AuthorizationCode?, AuthError?) UpdatedClientDataByCode(string key, IEnumerable<string> requestdScopes,
+        string userName, string nonce)
     {
         var oldValue = GetClientDataByCode(key);
 
@@ -160,10 +154,10 @@ public class AuthService : IAuthService
             return (null, new(InValidScope));
         }
 
-        AuthorizationCode newValue = oldValue with
+        var newValue = oldValue with
         {
             IsOpenId = requestdScopes.Contains("openId") || requestdScopes.Contains("profile"),
-            RequestedScopes = requestdScopes,
+            RequestedScopes = requestdScopes.ToArray(),
             Nonce = nonce,
             UserId = userName
         };
@@ -178,19 +172,8 @@ public class AuthService : IAuthService
         return (null, new(InvalidCode));
     }
 
-    public async Task<(TokenResponse?, AuthError?)> GenerateToken(IHttpContextAccessor httpContextAccessor)
+    public async Task<(TokenResponse?, AuthError?)> GenerateToken(TokenRequest request)
     {
-        var form = httpContextAccessor.HttpContext?.Request.Form;
-        TokenRequest request = new
-        (
-            CodeVerifier: form["code_verifier"],
-            ClientId: form["client_id"],
-            ClientSecret: form["client_secret"],
-            Code: form["code"],
-            GrantType: form["grant_type"],
-            RedirectUri: form["redirect_uri"]
-        );
-
         if (request.Code == null)
         {
             return (null, new(InvalidGrant));
@@ -278,30 +261,24 @@ public class AuthService : IAuthService
         ), null);
     }
 
-    private string GenerateAuthorizationCode(string clientId, IList<string> requestedScope)
+    private string GenerateAuthorizationCode(Client client, IEnumerable<string> requestedScope, string nonce)
     {
-        var client = clientStore.findByClientId(clientId);
+        var code = Guid.NewGuid().ToString();
 
-        if (client != null)
-        {
-            var code = Guid.NewGuid().ToString();
+        var authoCode = new AuthorizationCode
+        (
+            ClientId: client.ClientId,
+            ClientSecret: client.ClientSecret,
+            RedirectUri: client.RedirectUri,
+            RequestedScopes: requestedScope.ToArray(),
+            CreationTime: DateTime.Now,
+            Nonce: nonce
+        );
 
-            var authoCode = new AuthorizationCode
-            (
-                ClientId: clientId,
-                ClientSecret: client.ClientSecret,
-                RedirectUri: client.RedirectUri,
-                RequestedScopes: requestedScope,
-                CreationTime: DateTime.Now
-            );
+        // then store the code is the Concurrent Dictionary
+        issuedCodes[code] = authoCode;
 
-            // then store the code is the Concurrent Dictionary
-            issuedCodes[code] = authoCode;
-
-            return code;
-        }
-
-        return null;
+        return code;
 
     }
 
@@ -315,21 +292,21 @@ public class AuthService : IAuthService
         return null;
     }
 
-    private AuthorizationCode RemoveClientDataByCode(string key)
+    private AuthorizationCode? RemoveClientDataByCode(string key)
     {
         issuedCodes.TryRemove(key, out var authorizationCode);
 
         return authorizationCode;
     }
 
-    private (Client?, AuthError?) VerifyClientById(string clientId, bool checkWithSecret = false, string clientSecret = null)
+    private (Client?, AuthError?) VerifyClientById(string clientId, bool checkWithSecret = false, string? clientSecret = null)
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
             return (null, new(AccessDenied));
         }
 
-        var client = clientStore.Clients.Where(x => x.ClientId.Equals(clientId, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
+        var client = clientStore.findByClientId(clientId);
 
         if (client is null)
         {

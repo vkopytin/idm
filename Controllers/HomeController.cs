@@ -54,10 +54,10 @@ public class HomeController : Controller
       return RedirectToAction("Error", new { error = "invalid_login" });
     }
 
-    var (result, updateCodeError) = authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
-        loginRequest.UserName, nonce: loginRequest.Nonce);
+    var (_, updateCodeError) = authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
+        loginRequest.UserName, loginRequest.Nonce);
 
-    if (result is null)
+    if (updateCodeError is not null)
     {
       logger.LogError("SSO Login Error: {error}, Message: {message}",
         updateCodeError.Error.GetEnumDescription(),

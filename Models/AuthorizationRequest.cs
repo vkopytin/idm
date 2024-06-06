@@ -30,5 +30,6 @@ public record AuthorizationRequest
   /// Return the state in the result 
   /// if it was present in the client authorization request
   /// </summary>
-  string state
+  string state,
+  string nonce
 );

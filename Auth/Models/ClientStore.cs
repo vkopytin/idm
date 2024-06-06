@@ -43,6 +43,6 @@ public class ClientStore
 
   public Client? findByClientId(string clientId)
   {
-    return Clients.Where(x => x.ClientId == clientId).FirstOrDefault();
+    return Clients.Where(x => x.ClientId.Equals(clientId, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
   }
 }

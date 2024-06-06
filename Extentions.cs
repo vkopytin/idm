@@ -6,17 +6,18 @@ namespace Idm.Common;
 
 public static class ExtensionMethods
 {
-  public static string GetEnumDescription(this Enum en)
+  public static string GetEnumDescription(this Enum value)
   {
-    if (en == null) return null;
+    var fi = value.GetType().GetField(value.ToString());
 
-    var type = en.GetType();
+    var attributes = fi?.GetCustomAttributes(typeof(DescriptionAttribute), false) as DescriptionAttribute[];
 
-    var memberInfo = type.GetMember(en.ToString());
-    var description = (memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute),
-        false).FirstOrDefault() as DescriptionAttribute)?.Description;
+    if (attributes != null && attributes.Any())
+    {
+      return attributes.First().Description;
+    }
 
-    return description;
+    return value.ToString();
   }
 
   public static bool IsRedirectUriStartWithHttps(this string redirectUri)
