@@ -14,4 +14,5 @@ public interface IAuthService
     Task<(AuthorizeResponse?, AuthError?)> AuthorizeRequest(AuthorizationRequest authorizationRequest);
     Task<(AuthorizationCode?, AuthError?)> UpdatedClientDataByCode(string key, IEnumerable<string> requestdScopes, string userName, string nonce);
     Task<(TokenResponse?, AuthError?)> GenerateToken(TokenRequest request);
+    Task<(TokenResponse?, AuthError?)> GenerateAppToken(TokenRequest request);
 }

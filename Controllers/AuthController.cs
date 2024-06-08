@@ -3,6 +3,7 @@ using Auth;
 using Auth.Models;
 using Idm.Common;
 using Idm.Endpoints;
+using Idm.Models;
 using Idm.OauthRequest;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -276,6 +277,17 @@ public class AuthController : ControllerBase
             {
                 return BadRequest(new { message = $"Field: '{fieldName}' is missing" });
             }
+        }
+
+        if (request.GrantType == "appToken")
+        {
+            var (appToken, tokenError) = await authService.GenerateAppToken(request);
+            if (appToken is null)
+            {
+                return Ok(tokenError);
+            }
+
+            return Ok(appToken);
         }
 
         var (result, err) = await authService.GenerateToken(request);

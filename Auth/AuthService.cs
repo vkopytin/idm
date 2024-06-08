@@ -180,7 +180,7 @@ public class AuthService : IAuthService
         var (client, err) = await VerifyClientById(request.ClientId, true, request.ClientSecret);
         if (client is null)
         {
-            return (null, err);
+            return (null, new(InvalidClient, Message: "Generate token error"));
         }
 
         // check code from the Concurrent Dictionary
@@ -255,6 +255,35 @@ public class AuthService : IAuthService
             access_token: new JwtSecurityTokenHandler().WriteToken(access_token),
             id_token: id_token != null ? new JwtSecurityTokenHandler().WriteToken(id_token) : null,
             code: request.Code
+        ), null);
+    }
+
+    public async Task<(TokenResponse?, AuthError?)> GenerateAppToken(TokenRequest request)
+    {
+        var tokenExpirationInMinutes = 60 * 24 * 36 * 10;
+
+        var (client, err) = await VerifyClientById(request.ClientId, true, request.ClientSecret);
+        if (client is null)
+        {
+            return (null, err);
+        }
+        var key_at = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(client.ClientSecret));
+        var credentials_at = new SigningCredentials(key_at, SecurityAlgorithms.HmacSha256);
+        int iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
+        Claim[] claims_at = [
+            new("iss", client.ClientUri),
+            new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
+            new("scopes", "read:files"),
+            new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
+        ];
+        var access_token = new JwtSecurityToken(jwtOptions.Issuer, request.ClientId, claims_at, signingCredentials: credentials_at,
+            expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes));
+
+        return (new(
+            access_token: new JwtSecurityTokenHandler().WriteToken(access_token),
+            id_token: null,
+            code: request.Code ?? string.Empty,
+            token_type: "app_token"
         ), null);
     }
 
