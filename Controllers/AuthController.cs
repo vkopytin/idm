@@ -247,7 +247,7 @@ public class AuthController : ControllerBase
 
         var loginModel = new OpenIdConnectLoginRequest
         (
-            UserName: null,
+            UserName: authorizationRequest.username,
             Password: null,
             RedirectUri: result.RedirectUri,
             Code: result.Code,

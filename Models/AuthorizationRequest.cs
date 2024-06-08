@@ -31,5 +31,6 @@ public record AuthorizationRequest
   /// if it was present in the client authorization request
   /// </summary>
   string state,
-  string nonce
+  string nonce,
+  string? username
 );
