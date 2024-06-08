@@ -273,7 +273,7 @@ public class AuthService : IAuthService
         Claim[] claims_at = [
             new("iss", client.ClientUri),
             new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
-            new("scopes", "read:files"),
+            new("scopes", string.Join(',', client.AllowedScopes)),
             new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
         ];
         var access_token = new JwtSecurityToken(jwtOptions.Issuer, request.ClientId, claims_at, signingCredentials: credentials_at,
