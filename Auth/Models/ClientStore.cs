@@ -1,8 +1,8 @@
 using Idm.Models;
 
-namespace Idm.Auth.Models;
+namespace Auth.Models;
 
-public class ClientStore
+public class ClientStorex
 {
   public IEnumerable<Client> Clients =
   [

@@ -11,7 +11,7 @@ public interface IAuthService
     public Task<(User?, AuthError?)> Login(string email, string password, string scope);
     public Task<User> Register(User user);
 
-    (AuthorizeResponse?, AuthError?) AuthorizeRequest(AuthorizationRequest authorizationRequest);
-    (AuthorizationCode?, AuthError?) UpdatedClientDataByCode(string key, IEnumerable<string> requestdScopes, string userName, string nonce);
+    Task<(AuthorizeResponse?, AuthError?)> AuthorizeRequest(AuthorizationRequest authorizationRequest);
+    Task<(AuthorizationCode?, AuthError?)> UpdatedClientDataByCode(string key, IEnumerable<string> requestdScopes, string userName, string nonce);
     Task<(TokenResponse?, AuthError?)> GenerateToken(TokenRequest request);
 }

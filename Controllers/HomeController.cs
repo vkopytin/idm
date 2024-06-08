@@ -54,7 +54,7 @@ public class HomeController : Controller
       return RedirectToAction("Error", new { error = "invalid_login" });
     }
 
-    var (_, updateCodeError) = authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
+    var (_, updateCodeError) = await authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
         loginRequest.UserName, loginRequest.Nonce);
 
     if (updateCodeError is not null)

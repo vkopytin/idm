@@ -1,4 +1,4 @@
-namespace Idm.Auth.Models;
+namespace Auth.Models;
 
 public record Client(
     string ClientName,

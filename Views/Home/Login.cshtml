@@ -3,16 +3,94 @@
   ViewData["Title"] = "Login";
   Layout = "~/Views/Shared/_Layout.cshtml";
 }
-
-<h1>Login - Page</h1>
-
-<div>
-  @foreach (var i in Model.RequestedScopes)
-  {
-    <p>@i</p>
+<style>
+  * {
+    box-sizing: border-box;
   }
 
-  <div>
+  body {
+    background-color: #3498DB;
+    font-family: "Arial", sans-serif;
+    padding: 50px;
+  }
+
+  .container {
+    margin: 20px auto;
+    padding: 10px;
+    width: 300px;
+    background-color: #fff;
+    border-radius: 5px;
+  }
+
+  h1 {
+    width: 70%;
+    color: #777;
+    font-size: 32px;
+    margin: 28px auto;
+    margin-bottom: 20px;
+    text-align: center;
+    /*padding-top: 40px;*/
+  }
+
+  form {
+    /*padding: 15px;*/
+    text-align: center;
+  }
+
+  input {
+    padding: 12px 0;
+    margin-bottom: 10px;
+    border-radius: 3px;
+    border: 2px solid transparent;
+    text-align: center;
+    width: 90%;
+    font-size: 16px;
+    transition: border .2s, background-color .2s;
+  }
+
+  form label {
+    width: 100%;
+    display: block;
+    text-align: left;
+    margin: 6px 0px 6px 24px;
+  }
+
+  form .field {
+    background-color: #ECF0F1;
+    text-align: left;
+    padding-left: 8px;
+  }
+
+  form .field:focus {
+    border: 2px solid #3498DB;
+  }
+
+  form .btn {
+    background-color: #3498DB;
+    color: #fff;
+    line-height: 25px;
+    cursor: pointer;
+  }
+
+  form .btn:hover,
+  form .btn:active {
+    background-color: #1F78B4;
+    border: 2px solid #1F78B4;
+  }
+
+  .pass-link {
+    text-align: center;
+  }
+
+  .pass-link a:link,
+  .pass-link a:visited {
+    font-size: 12px;
+    color: #777;
+  }
+</style>
+<div>
+  <div class="container">
+    <h1>Login</h1>
     <form asp-action="Login" asp-controller="Home" method="post">
       <input type="hidden" asp-for="RedirectUri" />
       <input type="hidden" asp-for="Code" />
@@ -25,17 +103,24 @@
 
       <div>
         <label for="user-name">User Name</label>
-        <input type="text" id="user-name" asp-for="UserName" value="volodymyr.kopytin@yahoo.com" />
+        <input type="text" id="user-name" asp-for="UserName" value="" class="field" />
       </div>
 
       <div>
         <label for="user-password">Password</label>
-        <input type="text" id="user-password" asp-for="Password" value="temp1234" />
+        <input type="password" id="user-password" asp-for="Password" value="" class="field" />
       </div>
 
       <div>
-        <input type="submit" value="Login" />
+        <input type="submit" value="Login" class="btn" />
       </div>
     </form>
+    <div class="pass-link">
+      <a href="#" style="display: none;">Lost your password?</a>
+      @foreach (var i in Model.RequestedScopes)
+      {
+        <span>@i &nbsp;</span>
+      }
+    </div>
   </div>
 </div>

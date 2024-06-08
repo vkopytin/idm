@@ -18,7 +18,6 @@ public class AuthController : ControllerBase
 {
     private readonly IHttpContextAccessor httpContextAccessor;
     private readonly IAuthService authService;
-    private readonly CookieOptions cookieOptions;
     private readonly JwtOptions jwtOptions;
     private readonly ILogger logger;
 
@@ -32,13 +31,6 @@ public class AuthController : ControllerBase
         this.httpContextAccessor = httpContextAccessor;
         this.jwtOptions = jwtOptions;
         this.logger = logger;
-        cookieOptions = new CookieOptions()
-        {
-            SameSite = SameSiteMode.None,
-            Secure = true,
-            HttpOnly = false,
-            MaxAge = TimeSpan.FromMinutes(30)
-        };
     }
 
     // POST: auth/login
@@ -238,14 +230,14 @@ public class AuthController : ControllerBase
 
     [AllowAnonymous]
     [HttpGet]
-    public IActionResult Authorize([FromQuery] AuthorizationRequest authorizationRequest)
+    public async Task<IActionResult> Authorize([FromQuery] AuthorizationRequest authorizationRequest)
     {
         if (Request.IsHttps == false)
         {
             return RedirectToAction("Error", new { error = "request is not secure, MUST be TLS" });
         }
 
-        var (result, err) = authService.AuthorizeRequest(authorizationRequest);
+        var (result, err) = await authService.AuthorizeRequest(authorizationRequest);
 
         if (result is null)
         {
@@ -276,7 +268,7 @@ public class AuthController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Token([FromForm] TokenRequest request)
     {
-        string[] checkFields = ["client_id", "code", "grant_type", "redirect_uri", "code_verifier"];
+        string[] checkFields = ["client_id", "grant_type"];
         var form = httpContextAccessor.HttpContext?.Request.Form;
         foreach (var fieldName in checkFields)
         {

@@ -1,6 +1,7 @@
 ﻿using AppConfiguration;
 using Auth;
 using Auth.Db;
+using Auth.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -22,6 +23,9 @@ var apiCorsPolicy = "ApiCorsPolicy";
 builder.Services.AddSingleton(p => p.GetRequiredService<IConfiguration>().GetSection("Jwt")
   .Get<JwtOptions>() ?? throw new Exception("appsetings missing JWT section")
 );
+builder.Services.AddSingleton(p => p.GetRequiredService<IConfiguration>().GetSection("Account")
+  .Get<AccountOptions>() ?? throw new Exception("appsettings missing Account:AccessToken"));
+builder.Services.AddHttpClient();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddCors(options =>
 {
@@ -48,6 +52,7 @@ builder.Services.AddTransient(o =>
   return new MongoDbContext(client);
 });
 builder.Services.AddSingleton<IAuthService, AuthService>();
+builder.Services.AddTransient<IAccountService, AccountService>();
 builder.Services.AddAuthorization(options =>
 {
   var scopes = new[] {

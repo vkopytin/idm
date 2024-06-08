@@ -1,6 +1,5 @@
-using System;
 using System.ComponentModel;
-using System.Linq;
+using System.Text.Json;
 
 namespace Idm.Common;
 
@@ -25,5 +24,18 @@ public static class ExtensionMethods
     if (redirectUri != null && redirectUri.StartsWith("https")) return true;
 
     return false;
+  }
+
+  public static T? ToJson<T>(this Stream? value)
+  {
+    if (value is null)
+    {
+      return default;
+    }
+
+    return JsonSerializer.Deserialize<T>(value, new JsonSerializerOptions
+    {
+      PropertyNameCaseInsensitive = true
+    });
   }
 }

@@ -13,7 +13,6 @@ namespace Auth;
 using AppConfiguration;
 using Auth.Errors;
 using BCrypt.Net;
-using Idm.Auth.Models;
 using Idm.Common;
 using Idm.OauthRequest;
 using Idm.OauthResponse;
@@ -22,14 +21,15 @@ using static Idm.OauthResponse.ErrorTypeEnum;
 public class AuthService : IAuthService
 {
     private readonly ConcurrentDictionary<string, AuthorizationCode> issuedCodes = new ConcurrentDictionary<string, AuthorizationCode>();
-    private readonly ClientStore clientStore = new();
     private readonly MongoDbContext dbContext;
+    private readonly IAccountService accountService;
     private readonly JwtOptions jwtOptions;
 
-    public AuthService(MongoDbContext dbContext, JwtOptions options)
+    public AuthService(MongoDbContext dbContext, IAccountService accountService, JwtOptions options)
     {
         this.dbContext = dbContext;
         jwtOptions = options;
+        this.accountService = accountService;
     }
 
     public async Task<(User?, AuthError?)> Login(string email, string password, string scopes)
@@ -81,9 +81,9 @@ public class AuthService : IAuthService
         return user;
     }
 
-    public (AuthorizeResponse?, AuthError?) AuthorizeRequest(AuthorizationRequest authorizationRequest)
+    public async Task<(AuthorizeResponse?, AuthError?)> AuthorizeRequest(AuthorizationRequest authorizationRequest)
     {
-        var (client, err) = VerifyClientById(authorizationRequest.client_id);
+        var (client, err) = await VerifyClientById(authorizationRequest.client_id);
         if (client is null)
         {
             return (null, new(InvalidClient, err?.Error.GetEnumDescription()));
@@ -128,7 +128,7 @@ public class AuthService : IAuthService
     // Before updated the Concurrent Dictionary I have to Process User Sign In,
     // and check the user credienail first
     // But here I merge this process here inside update Concurrent Dictionary method
-    public (AuthorizationCode?, AuthError?) UpdatedClientDataByCode(string key, IEnumerable<string> requestdScopes,
+    public async Task<(AuthorizationCode?, AuthError?)> UpdatedClientDataByCode(string key, IEnumerable<string> requestdScopes,
         string userName, string nonce)
     {
         var oldValue = GetClientDataByCode(key);
@@ -138,8 +138,7 @@ public class AuthService : IAuthService
             return (null, new AuthError(InvalidRequest));
         }
 
-        // check the requested scopes with the one that are stored in the Client Store 
-        var client = clientStore.Clients.Where(x => x.ClientId == oldValue.ClientId).FirstOrDefault();
+        var (client, err) = await accountService.GetClient(oldValue.ClientId);
         if (client is null)
         {
             return (null, new AuthError(InvalidRequest));
@@ -162,9 +161,7 @@ public class AuthService : IAuthService
             UserId = userName
         };
 
-        var result = issuedCodes.TryUpdate(key, newValue, oldValue);
-
-        if (result)
+        if (issuedCodes.TryUpdate(key, newValue, oldValue))
         {
             return (newValue, null);
         }
@@ -180,7 +177,7 @@ public class AuthService : IAuthService
             return (null, new(InvalidGrant));
         }
 
-        var (client, err) = VerifyClientById(request.ClientId, true, request.ClientSecret);
+        var (client, err) = await VerifyClientById(request.ClientId, true, request.ClientSecret);
         if (client is null)
         {
             return (null, err);
@@ -299,14 +296,14 @@ public class AuthService : IAuthService
         return authorizationCode;
     }
 
-    private (Client?, AuthError?) VerifyClientById(string clientId, bool checkWithSecret = false, string? clientSecret = null)
+    private async Task<(Client?, AuthError?)> VerifyClientById(string clientId, bool checkWithSecret = false, string? clientSecret = null)
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
             return (null, new(AccessDenied));
         }
 
-        var client = clientStore.findByClientId(clientId);
+        var (client, err) = await accountService.GetClient(clientId);
 
         if (client is null)
         {
