@@ -220,7 +220,7 @@ public class AuthService : IAuthService
                 new("sub", "856933325856"),
                 new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
                 new("nonce", clientCodeChecker.Nonce),
-                new("scopes", "read:files"),
+                new("scopes", string.Join(',', clientCodeChecker.RequestedScopes)),
                 new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
             };
             foreach (var amr in amrs)
@@ -241,7 +241,7 @@ public class AuthService : IAuthService
         Claim[] claims_at = [
             new("iss", client.ClientUri),
             new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
-            new("scopes", "read:files"),
+            new("scopes", string.Join(',', clientCodeChecker.RequestedScopes)),
             new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
         ];
         var access_token = new JwtSecurityToken(jwtOptions.Issuer, request.ClientId, claims_at, signingCredentials: credentials_at,
