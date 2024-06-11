@@ -279,17 +279,6 @@ public class AuthController : ControllerBase
             }
         }
 
-        if (request.GrantType == "appToken")
-        {
-            var (appToken, tokenError) = await authService.GenerateAppToken(request);
-            if (appToken is null)
-            {
-                return Ok(tokenError);
-            }
-
-            return Ok(appToken);
-        }
-
         var (result, err) = await authService.GenerateToken(request);
 
         if (result is null)
@@ -301,5 +290,19 @@ public class AuthController : ControllerBase
         }
 
         return Ok(result);
+    }
+
+    [Authorize("read:user-info")]
+    [HttpPost]
+    [ActionName("app-token")]
+    public async Task<IActionResult> AppToken([FromForm] TokenRequest request)
+    {
+        var (appToken, tokenError) = await authService.GenerateAppToken(request);
+        if (appToken is null)
+        {
+            return Ok(tokenError);
+        }
+
+        return Ok(appToken);
     }
 }
