@@ -36,7 +36,8 @@ builder.Services.AddCors(options =>
       .WithOrigins(
         "http://local-dev.azurewebsites.net:4200", "http://localhost:4200", "http://dev.local:4200",
         "https://local-dev.azurewebsites.net:4200", "https://localhost:4200", "https://dev.local:4200",
-        "https://local-dev.azurewebsites.net", "https://localhost", "https://dev.local"
+        "https://local-dev.azurewebsites.net", "https://localhost", "https://dev.local",
+        "https://vko-idm.azurewebsites.net/"
       )
       .AllowAnyHeader()
       .AllowAnyMethod()
