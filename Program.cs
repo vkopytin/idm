@@ -18,6 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 var jwtSecretKey = builder.Configuration["JWT:SecretKey"] ?? throw new Exception("appsettings config error: JWT secret key is null");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new Exception("appsettings config error: JWT issues is not specified");
+var jwtAudience = builder.Configuration["JWT:Audience"] ?? throw new Exception("appsettings config error: JWT audience is not specified");
 var apiCorsPolicy = "ApiCorsPolicy";
 
 builder.Services.AddSingleton(p => p.GetRequiredService<IConfiguration>().GetSection("Jwt")
@@ -78,7 +79,7 @@ builder.Services.AddAuthorization(options =>
 .AddJwtBearer(opt =>
 {
   // for development only
-  opt.Audience = builder.Configuration["JWT:Audience"];
+  opt.Audience = jwtAudience;
   opt.RequireHttpsMetadata = false;
   opt.SaveToken = true;
   opt.TokenValidationParameters = new TokenValidationParameters
@@ -89,7 +90,7 @@ builder.Services.AddAuthorization(options =>
     ValidIssuers = [jwtIssuer],
     ValidIssuer = jwtIssuer,
     ValidateAudience = true,
-    ValidAudiences = [builder.Configuration["JWT:Audience"]],
+    ValidAudiences = [jwtAudience, "local-dev"],
   };
   opt.Events = new JwtBearerEvents
   {
