@@ -14,5 +14,7 @@ public record TokenRequest(
   [FromForm(Name = "redirect_uri")]
   string? RedirectUri,
   [FromForm(Name = "code_verifier")]
-  string? CodeVerifier
+  string? CodeVerifier,
+  [FromForm(Name="refresh_token")]
+  string? RefreshToken
 );

@@ -10,9 +10,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Auth;
 
+using System.Security.Cryptography;
 using AppConfiguration;
 using Auth.Errors;
 using BCrypt.Net;
+using DnsClient.Protocol;
 using Idm.Common;
 using Idm.OauthRequest;
 using Idm.OauthResponse;
@@ -155,7 +157,7 @@ public class AuthService : IAuthService
 
         var newValue = oldValue with
         {
-            IsOpenId = requestdScopes.Contains("openId") || requestdScopes.Contains("profile"),
+            IsOpenId = true,
             RequestedScopes = requestdScopes.ToArray(),
             Nonce = nonce,
             UserId = userName
@@ -171,7 +173,6 @@ public class AuthService : IAuthService
 
     public async Task<(TokenResponse?, AuthError?)> GenerateToken(TokenRequest request)
     {
-        var tokenExpirationInMinutes = 5;
         if (request.Code == null)
         {
             return (null, new(InvalidGrant));
@@ -204,58 +205,59 @@ public class AuthService : IAuthService
 
         int iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
 
-        JwtSecurityToken? id_token = null;
+        JwtSecurityToken? idToken = null;
         if (clientCodeChecker.IsOpenId)
         {
-            string[] amrs = ["pwd"];
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(client.ClientSecret));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new List<Claim>()
-            {
-                new(ClaimTypes.Name, user.UserName),
-                new(ClaimTypes.GivenName, user.Name),
-                new(ClaimTypes.Role, user.Role),
-                new("sub", "856933325856"),
-                new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
-                new("nonce", clientCodeChecker.Nonce),
-                new("scopes", string.Join(' ', clientCodeChecker.RequestedScopes)),
-                new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
-            };
-            foreach (var amr in amrs)
-            {
-                claims.Add(new Claim("amr", amr)); // authentication method reference
-            }
-
-            id_token = new JwtSecurityToken(jwtOptions.Issuer, request.ClientId, claims,
-                signingCredentials: credentials,
-                expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes)
-            );
+            idToken = GenerateIdToken(clientCodeChecker, user);
         }
 
-        // Here I have to generate access token 
-        var key_at = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(client.ClientSecret));
-        var credentials_at = new SigningCredentials(key_at, SecurityAlgorithms.HmacSha256);
-
-        Claim[] claims_at = [
-            new("iss", client.ClientUri),
-            new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
-            new("scopes", string.Join(' ', clientCodeChecker.RequestedScopes)),
-            new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
-        ];
-        var access_token = new JwtSecurityToken(jwtOptions.Issuer, request.ClientId, claims_at, signingCredentials: credentials_at,
-            expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes));
+        var accessToken = GenerateAccessToken(clientCodeChecker, client.ClientUri);
+        var refreshToken = GenerateRefreshToken(clientCodeChecker, user.UserName);
 
         // here remoce the code from the Concurrent Dictionary
         RemoveClientDataByCode(request.Code);
 
         return (new
         (
-            access_token: new JwtSecurityTokenHandler().WriteToken(access_token),
-            id_token: id_token != null ? new JwtSecurityTokenHandler().WriteToken(id_token) : null,
+            access_token: new JwtSecurityTokenHandler().WriteToken(accessToken),
+            id_token: idToken != null ? new JwtSecurityTokenHandler().WriteToken(idToken) : null,
+            refresh_token: new JwtSecurityTokenHandler().WriteToken(refreshToken),
             code: request.Code
         ), null);
+    }
+
+    public async Task<(TokenResponse?, AuthError?)> RefreshToken(TokenRequest request)
+    {
+        var (client, err) = await VerifyClientById(request.ClientId);
+        if (client is null)
+        {
+            return (null, err);
+        }
+
+        var principal = GetPrincipalFromExpiredToken(request.RefreshToken, client.ClientSecret);
+        var userName = principal.Identity.Name;
+        var user = await dbContext.Users.FirstOrDefaultAsync(user => user.UserName == userName);
+        if (user is null)
+        {
+            return (null, new(AccessDenied));
+        }
+        var scopesClaim = principal.FindFirst(c => c.Type == "scopes" && c.Issuer == jwtOptions.Issuer);
+        var authCodeId = GenerateAuthorizationCode(client, scopesClaim.Value.Split(' '), request.RefreshToken);
+        (var code, err) = await UpdatedClientDataByCode(authCodeId, scopesClaim.Value.Split(' '), user.UserName, string.Empty);
+        if (code is null)
+        {
+            return (null, err);
+        }
+
+        return await GenerateToken(new(
+            ClientId: client.ClientId,
+            GrantType: "refresh_token",
+            ClientSecret: client.ClientSecret,
+            Code: authCodeId,
+            RedirectUri: null,
+            CodeVerifier: null,
+            RefreshToken: null
+        ));
     }
 
     public async Task<(TokenResponse?, AuthError?)> GenerateAppToken(TokenRequest request)
@@ -282,6 +284,7 @@ public class AuthService : IAuthService
         return (new(
             access_token: new JwtSecurityTokenHandler().WriteToken(access_token),
             id_token: null,
+            refresh_token: null,
             code: request.Code ?? string.Empty,
             token_type: "app_token"
         ), null);
@@ -354,5 +357,93 @@ public class AuthService : IAuthService
         }
 
         return (null, new(UnAuthoriazedClient));
+    }
+
+    private JwtSecurityToken GenerateIdToken(AuthorizationCode authorizationCode, User user)
+    {
+        var tokenExpirationInMinutes = 5;
+        string[] amrs = ["pwd"];
+        var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
+
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authorizationCode.ClientSecret));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>()
+        {
+            new(ClaimTypes.Name, user.UserName),
+            new(ClaimTypes.GivenName, user.Name),
+            new(ClaimTypes.Role, user.Role),
+            new(ClaimTypes.Email, user.UserName),
+            new("sub", user.UserName),
+            new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
+            new("nonce", authorizationCode.Nonce),
+            new("scopes", string.Join(' ', authorizationCode.RequestedScopes)),
+            new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
+        };
+        foreach (var amr in amrs)
+        {
+            claims.Add(new Claim("amr", amr)); // authentication method reference
+        }
+
+        return new JwtSecurityToken(jwtOptions.Issuer, authorizationCode.ClientId, claims,
+            signingCredentials: credentials,
+            expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes)
+        );
+    }
+
+    private JwtSecurityToken GenerateAccessToken(AuthorizationCode authorizationCode, string clientUri)
+    {
+        var tokenExpirationInMinutes = 5;
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authorizationCode.ClientSecret));
+        var clientCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+        var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
+
+        Claim[] userClaims = [
+            new("iss", clientUri),
+            new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
+            new("scopes", string.Join(' ', authorizationCode.RequestedScopes)),
+            new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
+        ];
+        return new JwtSecurityToken(jwtOptions.Issuer, authorizationCode.ClientId, userClaims, signingCredentials: clientCredentials,
+            expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes));
+    }
+
+    private JwtSecurityToken GenerateRefreshToken(AuthorizationCode authorizationCode, string userName)
+    {
+        var tokenExpirationInMinutes = 10;
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authorizationCode.ClientSecret));
+        var clientCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+        var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
+
+        Claim[] userClaims = [
+            new(ClaimTypes.Name, userName),
+            new("scopes", string.Join(' ', authorizationCode.RequestedScopes)),
+            new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
+            new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
+        ];
+
+        return new JwtSecurityToken(jwtOptions.Issuer, authorizationCode.ClientId, userClaims,
+            signingCredentials: clientCredentials,
+            expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes));
+    }
+
+    private ClaimsPrincipal GetPrincipalFromExpiredToken(string token, string clientSecret)
+    {
+        var tokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateAudience = false,
+            ValidateIssuer = false,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(clientSecret)),
+            ValidateLifetime = false
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var principal = tokenHandler.ValidateToken(token, tokenValidationParameters, out SecurityToken securityToken);
+        if (securityToken is not JwtSecurityToken jwtSecurityToken || !jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
+            throw new SecurityTokenException("Invalid token");
+
+        return principal;
+
     }
 }

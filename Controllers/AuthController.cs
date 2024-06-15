@@ -279,17 +279,30 @@ public class AuthController : ControllerBase
             }
         }
 
-        var (result, err) = await authService.GenerateToken(request);
+        if (request.GrantType == "refresh_token")
+        {
+            var (refreshTokenResult, refreshTokenError) = await authService.RefreshToken(request);
+            if (refreshTokenResult is null)
+            {
+                logger.LogError("Refresh token error: {error}. Message: {message}",
+                    refreshTokenError?.Error.GetEnumDescription(), refreshTokenError?.Message
+                );
+                return Ok("0");
+            }
+            return Ok(refreshTokenResult);
+        }
 
-        if (result is null)
+        var (tokenResult, tokenError) = await authService.GenerateToken(request);
+
+        if (tokenResult is null)
         {
             logger.LogError("Make token error: {error}. Message: {message}",
-                err?.Error.GetEnumDescription(), err?.Message
+                tokenError?.Error.GetEnumDescription(), tokenError?.Message
             );
             return Ok("0");
         }
 
-        return Ok(result);
+        return Ok(tokenResult);
     }
 
     [Authorize("read:user-info")]
