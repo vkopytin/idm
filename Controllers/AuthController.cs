@@ -281,7 +281,12 @@ public class AuthController : ControllerBase
 
         if (request.GrantType == "refresh_token")
         {
-            var (refreshTokenResult, refreshTokenError) = await authService.RefreshToken(request);
+            if (string.IsNullOrEmpty(request.RefreshToken))
+            {
+                return BadRequest(new { message = "refresh token is empty" });
+            }
+
+            var (refreshTokenResult, refreshTokenError) = await authService.RefreshToken(request.ClientId, request.RefreshToken);
             if (refreshTokenResult is null)
             {
                 logger.LogError("Refresh token error: {error}. Message: {message}",

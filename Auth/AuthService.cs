@@ -109,7 +109,7 @@ public class AuthService : IAuthService
 
         if (!clientScopes.Any())
         {
-            return (null, new(InValidScope, "scopes are invalid"));
+            return (null, new(InvalidScope, "scopes are invalid"));
         }
 
         var code = GenerateAuthorizationCode(client, clientScopes.ToArray(), authorizationRequest.nonce);
@@ -152,7 +152,7 @@ public class AuthService : IAuthService
 
         if (!clientScope.Any())
         {
-            return (null, new(InValidScope));
+            return (null, new(InvalidScope));
         }
 
         var newValue = oldValue with
@@ -188,19 +188,19 @@ public class AuthService : IAuthService
         var clientCodeChecker = GetClientDataByCode(request.Code);
         if (clientCodeChecker is null)
         {
-            return (null, new(InvalidGrant));
+            return (null, new(InvalidGrant, "Can't find the login information"));
         }
 
         var user = await dbContext.Users.FirstOrDefaultAsync(user => user.UserName == clientCodeChecker.UserId);
         if (user is null)
         {
-            return (null, new(AccessDenied));
+            return (null, new(AccessDenied, "User was not found"));
         }
         // check if the current client who is one made this authentication request
 
         if (request.ClientId != clientCodeChecker.ClientId)
         {
-            return (null, new(InvalidGrant));
+            return (null, new(InvalidGrant, "Something wrong with the provided ClientId"));
         }
 
         int iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
@@ -220,8 +220,7 @@ public class AuthService : IAuthService
         var since = EpochTime.GetIntDate(DateTime.Now);
         var expiresIn = long.Parse(accessToken.Claims.First(claim => claim.Type.Equals("exp")).Value);
 
-        return (new
-        (
+        return (new(
             access_token: new JwtSecurityTokenHandler().WriteToken(accessToken),
             id_token: idToken != null ? new JwtSecurityTokenHandler().WriteToken(idToken) : null,
             refresh_token: new JwtSecurityTokenHandler().WriteToken(refreshToken),
@@ -230,23 +229,31 @@ public class AuthService : IAuthService
         ), null);
     }
 
-    public async Task<(TokenResponse?, AuthError?)> RefreshToken(TokenRequest request)
+    public async Task<(TokenResponse?, AuthError?)> RefreshToken(string clientId, string refreshToken)
     {
-        var (client, err) = await VerifyClientById(request.ClientId);
+        var (client, err) = await VerifyClientById(clientId);
         if (client is null)
         {
             return (null, err);
         }
 
-        var principal = GetPrincipalFromExpiredToken(request.RefreshToken, client.ClientSecret);
-        var userName = principal.Identity.Name;
+        var principal = GetPrincipalFromExpiredToken(refreshToken, client.ClientSecret);
+        var userName = principal?.Identity?.Name;
+        if (string.IsNullOrEmpty(userName))
+        {
+            return (null, new(InvalidIdentityPrincipal, "Can't get valid principal from the provided refresh token"));
+        }
         var user = await dbContext.Users.FirstOrDefaultAsync(user => user.UserName == userName);
         if (user is null)
         {
-            return (null, new(AccessDenied));
+            return (null, new(AccessDenied, $"Can't find the user identified by '{userName}'"));
         }
-        var scopesClaim = principal.FindFirst(c => c.Type == "scopes" && c.Issuer == jwtOptions.Issuer);
-        var authCodeId = GenerateAuthorizationCode(client, scopesClaim.Value.Split(' '), request.RefreshToken);
+        var scopesClaim = principal?.FindFirst(c => c.Type == "scopes" && c.Issuer == jwtOptions.Issuer);
+        if (scopesClaim is null)
+        {
+            return (null, new(InvalidScope, "Can't get valid scop from the provided principal"));
+        }
+        var authCodeId = GenerateAuthorizationCode(client, scopesClaim.Value.Split(' '), refreshToken);
         (var code, err) = await UpdatedClientDataByCode(authCodeId, scopesClaim.Value.Split(' '), user.UserName, string.Empty);
         if (code is null)
         {
@@ -340,14 +347,14 @@ public class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(clientId))
         {
-            return (null, new(AccessDenied));
+            return (null, new(AccessDenied, "ClientId is null"));
         }
 
         var (client, err) = await accountService.GetClient(clientId);
 
         if (client is null)
         {
-            return (null, new(AccessDenied));
+            return (null, new(AccessDenied, $"Can't find the client identified by '{clientId}'"));
         }
 
         if (checkWithSecret && !string.IsNullOrEmpty(clientSecret))

@@ -20,7 +20,10 @@ public enum ErrorTypeEnum : byte
   InvalidCode,
 
   [Description("invalid_scope")]
-  InValidScope,
+  InvalidScope,
+
+  [Description("_invalid_identity_principal")]
+  InvalidIdentityPrincipal,
 
   [Description("server_error")]
   ServerError,
