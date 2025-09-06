@@ -408,7 +408,7 @@ public class AuthService : IAuthService
 
     private JwtSecurityToken GenerateAccessToken(AuthorizationCode authorizationCode, string clientUri)
     {
-        var tokenExpirationInMinutes = 5;
+        var tokenExpirationInMinutes = 60;
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authorizationCode.ClientSecret));
         var clientCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
         var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
@@ -425,7 +425,7 @@ public class AuthService : IAuthService
 
     private JwtSecurityToken GenerateRefreshToken(AuthorizationCode authorizationCode, string userName)
     {
-        var tokenExpirationInMinutes = 10;
+        var tokenExpirationInMinutes = 2 * 25 * 60;
         var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authorizationCode.ClientSecret));
         var clientCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
         var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
