@@ -432,6 +432,7 @@ public class AuthService : IAuthService
 
         Claim[] userClaims = [
             new(ClaimTypes.Name, userName),
+            new("sub", authorizationCode.UserId ?? userName),
             new("scopes", string.Join(' ', authorizationCode.RequestedScopes)),
             new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
             new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
