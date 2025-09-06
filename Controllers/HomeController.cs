@@ -47,7 +47,12 @@ public class HomeController : Controller
       return BadRequest(new { message = "Password needs to entered" });
     }
 
-    var (_, loginError) = await authService.Login(loginRequest.UserName, loginRequest.Password, "read:user-info read:files");
+    var (user, loginError) = await authService.Login(loginRequest.UserName, loginRequest.Password, "read:user-info read:files");
+
+    if (user is null)
+    {
+      return RedirectToAction("Error", new { error = "invalid_user" });
+    }
 
     if (loginError is not null)
     {
@@ -55,7 +60,7 @@ public class HomeController : Controller
     }
 
     var (_, updateCodeError) = await authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
-        loginRequest.UserName, loginRequest.Nonce);
+        user, loginRequest.Nonce);
 
     if (updateCodeError is not null)
     {

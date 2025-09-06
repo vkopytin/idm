@@ -47,6 +47,8 @@ public class AuthService : IAuthService
             return (null, new AuthError(AccessDenied, "wrong password"));
         }
 
+        this.EnsureSecurityGroup(user);
+
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(jwtOptions.SecretKey);
 
@@ -54,6 +56,8 @@ public class AuthService : IAuthService
         {
             Subject = new ClaimsIdentity(
             [
+                new ("sub", user.Id.ToString()),
+                new ("oid", user.SecurityGroupId.ToString() ?? ""),
                 new (ClaimTypes.Name, user.UserName),
                 new (ClaimTypes.GivenName, user.Name),
                 new (ClaimTypes.Role, user.Role),
@@ -75,10 +79,23 @@ public class AuthService : IAuthService
 
     public async Task<User> Register(User user)
     {
+        var group = new SecurityGroup
+        {
+            GroupName = user.UserName,
+        };
         user.Password = BCrypt.HashPassword(user.Password);
         dbContext.Users.Add(user);
+        dbContext.SecurityGroups.Add(group);
 
         await dbContext.SaveChangesAsync();
+
+        var createdUser = await dbContext.Users.FirstOrDefaultAsync(u => u.UserName == user.UserName);
+        if (createdUser is null)
+        {
+            throw new Exception("User was not created");
+        }
+
+        this.EnsureSecurityGroup(createdUser);
 
         return user;
     }
@@ -130,8 +147,9 @@ public class AuthService : IAuthService
     // Before updated the Concurrent Dictionary I have to Process User Sign In,
     // and check the user credienail first
     // But here I merge this process here inside update Concurrent Dictionary method
-    public async Task<(AuthorizationCode?, AuthError?)> UpdatedClientDataByCode(string key, IEnumerable<string> requestdScopes,
-        string userName, string nonce)
+    public async Task<(AuthorizationCode?, AuthError?)> UpdatedClientDataByCode(
+        string key, IEnumerable<string> requestdScopes, User user, string nonce
+    )
     {
         var oldValue = GetClientDataByCode(key);
 
@@ -160,7 +178,8 @@ public class AuthService : IAuthService
             IsOpenId = true,
             RequestedScopes = requestdScopes.ToArray(),
             Nonce = nonce,
-            UserId = userName
+            UserId = user.UserName,
+            OpenId = user.SecurityGroupId.ToString() ?? ""
         };
 
         if (issuedCodes.TryUpdate(key, newValue, oldValue))
@@ -196,8 +215,8 @@ public class AuthService : IAuthService
         {
             return (null, new(AccessDenied, "User was not found"));
         }
-        // check if the current client who is one made this authentication request
 
+        // check if the current client who is one made this authentication request
         if (request.ClientId != clientCodeChecker.ClientId)
         {
             return (null, new(InvalidGrant, "Something wrong with the provided ClientId"));
@@ -251,10 +270,10 @@ public class AuthService : IAuthService
         var scopesClaim = principal?.FindFirst(c => c.Type == "scopes" && c.Issuer == jwtOptions.Issuer);
         if (scopesClaim is null)
         {
-            return (null, new(InvalidScope, "Can't get valid scop from the provided principal"));
+            return (null, new(InvalidScope, "Can't get valid scope from the provided principal"));
         }
         var authCodeId = GenerateAuthorizationCode(client, scopesClaim.Value.Split(' '), refreshToken);
-        (var code, err) = await UpdatedClientDataByCode(authCodeId, scopesClaim.Value.Split(' '), user.UserName, string.Empty);
+        (var code, err) = await UpdatedClientDataByCode(authCodeId, scopesClaim.Value.Split(' '), user, string.Empty);
         if (code is null)
         {
             return (null, err);
@@ -314,6 +333,7 @@ public class AuthService : IAuthService
             ClientId: client.ClientId,
             ClientSecret: client.ClientSecret,
             RedirectUri: client.RedirectUri,
+            OpenId: string.Empty,
             RequestedScopes: requestedScope.ToArray(),
             CreationTime: DateTime.Now,
             Nonce: nonce
@@ -414,6 +434,7 @@ public class AuthService : IAuthService
         var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
 
         Claim[] userClaims = [
+            new("oid", authorizationCode.OpenId),
             new("iss", clientUri),
             new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
             new("scopes", string.Join(' ', authorizationCode.RequestedScopes)),
@@ -460,5 +481,22 @@ public class AuthService : IAuthService
             throw new SecurityTokenException("Invalid token");
 
         return principal;
+    }
+
+    private void EnsureSecurityGroup(User user)
+    {
+        if (user.SecurityGroupId is not null)
+        {
+            return;
+        }
+
+        var group = new SecurityGroup
+        {
+            GroupName = user.UserName,
+        };
+        dbContext.SecurityGroups.Add(group);
+        dbContext.SaveChanges();
+        user.SecurityGroupId = group.Id;
+        dbContext.SaveChanges();
     }
 }

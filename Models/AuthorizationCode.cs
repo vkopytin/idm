@@ -10,6 +10,7 @@ public record AuthorizationCode
   DateTime CreationTime,
 
   string Nonce,
+  string OpenId,
   string? UserId = null,
   bool IsOpenId = true
 );

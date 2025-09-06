@@ -12,7 +12,7 @@ public interface IAuthService
     public Task<User> Register(User user);
 
     Task<(AuthorizeResponse?, AuthError?)> AuthorizeRequest(AuthorizationRequest authorizationRequest);
-    Task<(AuthorizationCode?, AuthError?)> UpdatedClientDataByCode(string key, IEnumerable<string> requestdScopes, string userName, string nonce);
+    Task<(AuthorizationCode?, AuthError?)> UpdatedClientDataByCode(string key, IEnumerable<string> requestdScopes, User user, string nonce);
     Task<(TokenResponse?, AuthError?)> GenerateToken(TokenRequest request);
     Task<(TokenResponse?, AuthError?)> GenerateAppToken(TokenRequest request);
     Task<(TokenResponse?, AuthError?)> RefreshToken(string clientId, string refreshToken);
