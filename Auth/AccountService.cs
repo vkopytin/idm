@@ -16,7 +16,21 @@ public class AccountService : IAccountService
   private readonly AccountOptions accountOptions;
 
   private string ListClientsUrl => $"{accountOptions.ApiUri}/home/list-clients";
-  private string GetClientUrl(string id) => $"{accountOptions.ApiUri}/home/client/{id}";
+  private string GetClientUrl(string id)
+  {
+    if (string.IsNullOrEmpty(accountOptions.ApiIp))
+    {
+      return $"{accountOptions.ApiUri}/home/client/{id}";
+    }
+    else
+    {
+      var uri = new Uri(accountOptions.ApiUri);
+      var apiIpUri = new UriBuilder(uri.Scheme, accountOptions.ApiIp, uri.Port).Uri;
+
+      return $"{apiIpUri}/home/client/{id}";
+    }
+  }
+  private string GetClientHost() => new Uri(accountOptions.ApiUri).Host;
 
   public AccountService(HttpClient httpClient, AccountOptions accountOptions, ILogger<AccountService> logger)
   {
@@ -57,6 +71,7 @@ public class AccountService : IAccountService
   {
     var bearerToken = accountOptions.AccessToken;
     var request = new HttpRequestMessage(HttpMethod.Get, GetClientUrl(clientId));
+    request.Headers.Host = GetClientHost();
     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearerToken);
 
     try

@@ -1,4 +1,5 @@
 public record AccountOptions(
   string AccessToken,
-  string ApiUri
+  string ApiUri,
+  string ApiIp
 );
