@@ -51,7 +51,7 @@ public class HomeController : Controller
 
     if (user is null)
     {
-      return RedirectToAction("Error", new { error = "invalid_user" });
+      return RedirectToAction("Error", new { error = "invalid_user", details = loginError });
     }
 
     if (loginError is not null)
@@ -73,6 +73,13 @@ public class HomeController : Controller
 
     var redirectUri = loginRequest.RedirectUri + "&code=" + loginRequest.Code;
     return Redirect(redirectUri);
+  }
+
+  [HttpGet]
+  [ActionName("error")]
+  public IActionResult Error(string error, string? details = null)
+  {
+    return View("Error", $"{error} {details}");
   }
 
 }

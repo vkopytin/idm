@@ -1,0 +1,18 @@
+@{
+  ViewData["Title"] = "Index";
+  Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row event_page">
+
+  @{
+    var error = (string)Model;
+    if (!string.IsNullOrEmpty(error))
+    {
+      <div class="alert alert-danger" role="alert">
+        @error
+      </div>
+    }
+  }
+
+</div>

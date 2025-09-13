@@ -13,6 +13,9 @@ public enum ErrorTypeEnum : byte
   [Description("access_denied")]
   AccessDenied,
 
+  [Description("invalid_password")]
+  AccessDeniedInvalidPassword,
+
   [Description("unsupported_response_type")]
   UnSupportedResponseType,
 
