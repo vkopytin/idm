@@ -1,5 +1,6 @@
 using Auth;
 using Idm.Common;
+using Idm.Models;
 using Idm.OauthRequest;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -51,7 +52,15 @@ public class HomeController : Controller
 
     if (user is null)
     {
-      return RedirectToAction("Error", new { error = "invalid_user", details = loginError });
+      return RedirectToAction("Error", new LoginError(
+        Message: loginError?.Message ?? loginError?.Error.ToString() ?? "Unexpected error",
+        UserName: loginRequest.UserName,
+        Password: loginRequest.Password,
+        RedirectUri: loginRequest.RedirectUri,
+        Code: loginRequest.Code,
+        Nonce: loginRequest.Nonce,
+        RequestedScopes: loginRequest.RequestedScopes
+      ));
     }
 
     if (loginError is not null)
@@ -77,9 +86,9 @@ public class HomeController : Controller
 
   [HttpGet]
   [ActionName("error")]
-  public IActionResult Error(string error, string? details = null)
+  public IActionResult Error(LoginError error)
   {
-    return View("Error", $"{error} {details}");
+    return View("Error", error);
   }
 
 }

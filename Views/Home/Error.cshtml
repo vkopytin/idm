@@ -1,3 +1,4 @@
+@model Idm.Models.LoginError
 @{
   ViewData["Title"] = "Index";
   Layout = "~/Views/Shared/_Layout.cshtml";
@@ -6,13 +7,29 @@
 <div class="row event_page">
 
   @{
-    var error = (string)Model;
-    if (!string.IsNullOrEmpty(error))
+    if (!string.IsNullOrEmpty(Model.Message))
     {
       <div class="alert alert-danger" role="alert">
-        @error
+        @Model.Message
       </div>
     }
   }
+
+  <form asp-action="Login" asp-controller="Home" method="get">
+    <input type="hidden" asp-for="RedirectUri" />
+    <input type="hidden" asp-for="Code" />
+    <input type="hidden" asp-for="Nonce" />
+    <input type="hidden" asp-for="UserName" />
+    <input type="hidden" asp-for="Password" />
+
+    @for (int i = 0; i < Model.RequestedScopes.Count; i++)
+    {
+      <input type="hidden" asp-for="RequestedScopes[i]" />
+    }
+
+    <div>
+      <input type="submit" value="Try Login again" class="btn" />
+    </div>
+  </form>
 
 </div>
