@@ -18,10 +18,11 @@
     <Content Include="Views\_ViewImports.cshtml" />
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Views\Home\Login.cshtml" />
+    <Content Include="Views\Home\Error.cshtml" />
     <Content Include="Views\Shared\_Layout.cshtml" />
 
-    <Content Update="Views\**\*.cshtml" CopyToPublishDirectory="PreserveNewest" /> 
-    <Content Update="Areas\MyArea1\Views\**\*.cshtml" CopyToPublishDirectory="PreserveNewest" /> 
+    <Content Update="Views\**\*.cshtml" CopyToPublishDirectory="PreserveNewest" />
+    <Content Update="Areas\MyArea1\Views\**\*.cshtml" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
