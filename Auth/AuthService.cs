@@ -7,17 +7,18 @@ using System.Text;
 using System.Collections.Concurrent;
 using Idm.Models;
 using Microsoft.EntityFrameworkCore;
-
-namespace Auth;
-
 using System.Security.Cryptography;
 using AppConfiguration;
 using Auth.Errors;
-using BCrypt.Net;
 using DnsClient.Protocol;
 using Idm.Common;
 using Idm.OauthRequest;
 using Idm.OauthResponse;
+
+namespace Auth;
+
+using BCrypt.Net;
+
 using static Idm.OauthResponse.ErrorTypeEnum;
 
 public class AuthService : IAuthService
@@ -371,6 +372,11 @@ public class AuthService : IAuthService
     }
 
     var (client, err) = await accountService.GetClient(clientId);
+
+    if (err?.Error == ServerError)
+    {
+      return (null, new(TemporarilyUnAvailable, err?.Message));
+    }
 
     if (client is null)
     {

@@ -90,8 +90,8 @@ public class AccountService : IAccountService
     }
     catch (Exception ex)
     {
-      logger.LogError("Error while fetching client list. Message:: {message}", ex.Message);
-      return (null, new(Error: ErrorTypeEnum.ServerError, Message: "Error fetching client list"));
+      logger.LogError("Error while fetching client by id. Message:: {message}", ex.Message);
+      return (null, new(Error: ErrorTypeEnum.ServerError, Message: $"Error fetching client '${clientId}'"));
     }
   }
 }
