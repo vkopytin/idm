@@ -6,5 +6,7 @@ public record OpenIdConnectLoginRequest(
     string RedirectUri,
     string Code,
     string Nonce,
-    IList<string> RequestedScopes
+    IList<string> RequestedScopes,
+    string? ResponseType = null,
+    string? AccessType = null
 );

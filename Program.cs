@@ -21,6 +21,9 @@ var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new Exception("apps
 var jwtAudience = builder.Configuration["JWT:Audience"] ?? throw new Exception("appsettings config error: JWT audience is not specified");
 var apiCorsPolicy = "ApiCorsPolicy";
 
+builder.Services.AddSingleton(p => p.GetRequiredService<IConfiguration>()
+  .Get<MainSettings>() ?? throw new Exception("appsettings are missing")
+);
 builder.Services.AddSingleton(p => p.GetRequiredService<IConfiguration>().GetSection("Jwt")
   .Get<JwtOptions>() ?? throw new Exception("appsetings missing JWT section")
 );
@@ -53,6 +56,7 @@ builder.Services.AddTransient(o =>
 {
   return new MongoDbContext(client);
 });
+builder.Services.AddTransient<GoogleService>();
 builder.Services.AddSingleton<IAuthService, AuthService>();
 builder.Services.AddTransient<IAccountService, AccountService>();
 builder.Services.AddAuthorization(options =>

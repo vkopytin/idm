@@ -1,4 +1,6 @@
+using AppConfiguration;
 using Auth;
+using Auth.Services;
 using Idm.Common;
 using Idm.Models;
 using Idm.OauthRequest;
@@ -12,11 +14,20 @@ namespace Controllers;
 [AllowAnonymous]
 public class HomeController : Controller
 {
+  private readonly MainSettings settings;
+  private readonly GoogleService googleService;
   private readonly IAuthService authService;
   private readonly ILogger logger;
 
-  public HomeController(IAuthService authService, ILogger<HomeController> logger)
+  public HomeController(
+    IAuthService authService,
+    GoogleService googleService,
+    MainSettings settings,
+    ILogger<HomeController> logger
+  )
   {
+    this.settings = settings;
+    this.googleService = googleService;
     this.authService = authService;
     this.logger = logger;
   }
@@ -32,6 +43,16 @@ public class HomeController : Controller
   public IActionResult LoginGet(OpenIdConnectLoginRequest loginRequest)
   {
     return View(loginRequest);
+  }
+
+  [HttpPost]
+  [AllowAnonymous]
+  [ActionName("GoogleLogin")]
+  public IActionResult GoogleLogin(OpenIdConnectLoginRequest loginRequest)
+  {
+    var url = googleService.BuildAuthUrl(loginRequest);
+
+    return Redirect(url);
   }
 
   [HttpPost]
