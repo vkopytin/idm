@@ -40,7 +40,7 @@ public class GoogleService
       ["client_id"] = settings.Google.ClientId,
       ["redirect_uri"] = settings.Google.RedirectUri,
       ["response_type"] = "code",
-      ["scope"] = "https://www.googleapis.com/auth/userinfo.profile", // add the scopes you need
+      ["scope"] = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/userinfo.profile", // add the scopes you need
       ["access_type"] = "offline" // request a refresh token
     };
 
