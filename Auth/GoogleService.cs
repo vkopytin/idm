@@ -6,6 +6,21 @@ using Idm.OauthRequest;
 
 namespace Auth.Services;
 
+record PersonResponse(string ResourceName, string ETag, List<Name> Names);
+
+record Name(
+  Metadata Metadata,
+  string DisplayName,
+  string FamilyName,
+  string GivenName,
+  string DisplayNameLastFirst,
+  string UnstructuredName
+);
+
+record Metadata(bool Primary, Source Source);
+
+record Source(string Type, string Id);
+
 public class GoogleService
 {
   private readonly HttpClient httpClient;
@@ -68,4 +83,55 @@ public class GoogleService
 
     return (token, null);
   }
+
+  public async Task<(string? result, string? error)> ListYoutubeSubscriptions(TokenResponse token)
+  {
+    const string subscriptionsUri = "https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true";
+    var subscriptionsRequest = new HttpRequestMessage(HttpMethod.Get, subscriptionsUri);
+    subscriptionsRequest.Headers.Add("Authorization", $"Bearer {token.AccessToken}");
+
+    var subscriptionsResponse = await httpClient.SendAsync(subscriptionsRequest);
+    var subscriptionsResponseContent = await subscriptionsResponse.Content.ReadAsStringAsync();
+
+    if (subscriptionsResponse.IsSuccessStatusCode is false)
+    {
+      return (null, $"Failed to get YouTube subscriptions: {subscriptionsResponseContent}");
+    }
+
+    return (subscriptionsResponseContent, null);
+  }
+
+  public async Task<(string? result, string? error)> GetUsersNameAsync(TokenResponse token)
+  {
+    const string userInfoUri = "https://people.googleapis.com/v1/people/me?personFields=names";
+    var userInfoRequest = new HttpRequestMessage(HttpMethod.Get, userInfoUri);
+    userInfoRequest.Headers.Add("Authorization", $"Bearer {token.AccessToken}");
+
+    using var httpClient = new HttpClient();
+    var userInfoResponse = await httpClient.SendAsync(userInfoRequest);
+    var userInfoResponseContent = await userInfoResponse.Content.ReadAsStringAsync();
+
+    if (userInfoResponse.IsSuccessStatusCode is false)
+    {
+      return (null, $"Failed to get user info: {userInfoResponseContent}");
+    }
+
+    if (string.IsNullOrEmpty(userInfoResponseContent))
+    {
+      return (null, $"User info response is empty.");
+    }
+
+    var userInfo = JsonSerializer.Deserialize<PersonResponse>(userInfoResponseContent, new JsonSerializerOptions
+    {
+      PropertyNameCaseInsensitive = true
+    });
+
+    if (userInfo is null)
+    {
+      return (null, $"Failed to parse user info response.");
+    }
+
+    return (userInfo.Names[0].DisplayName, null);
+  }
+
 }

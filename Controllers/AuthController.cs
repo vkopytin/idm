@@ -287,7 +287,13 @@ public class AuthController : ControllerBase
       return BadRequest(new { message = "Google login unsuccessful" });
     }
 
-    return Ok(token);
+    var (userName, error) = await googleService.ListYoutubeSubscriptions(token);
+
+    return Ok(new
+    {
+      token = token,
+      userName = userName ?? error
+    });
   }
 
   [AllowAnonymous]
