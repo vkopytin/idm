@@ -1,7 +1,10 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.Tasks;
 using AppConfiguration;
+using Auth.Db;
+using Auth.Models;
 using Auth.Models.Google;
 using Idm.Models;
 using Idm.OauthRequest;
@@ -25,20 +28,23 @@ record Source(string Type, string Id);
 
 public class GoogleService
 {
-  private readonly ConcurrentDictionary<string, AuthorizationCode> issuedCodes = new();
+  private readonly MongoDbContext dbContext;
   private readonly HttpClient httpClient;
   private readonly MainSettings settings;
 
-  public GoogleService(HttpClient httpClient, MainSettings settings)
+  public GoogleService(
+    MongoDbContext dbContext,
+    HttpClient httpClient,
+    MainSettings settings
+  )
   {
+    this.dbContext = dbContext;
     this.httpClient = httpClient;
     this.settings = settings;
   }
 
-  private string GenerateAuthNonce(IEnumerable<string> requestedScope)
+  private async Task<string> GenerateAuthNonce(IEnumerable<string> requestedScope)
   {
-    var nonce = Guid.NewGuid().ToString();
-
     var authoCode = new AuthorizationCode
     (
         ClientId: settings.Google.ClientId,
@@ -50,12 +56,14 @@ public class GoogleService
         Nonce: string.Empty
     );
 
-    issuedCodes[nonce] = authoCode;
+    var dbEntity = dbContext.AuthCodes.Add(authoCode.ToModel());
 
-    return nonce;
+    await dbContext.SaveChangesAsync();
+
+    return dbEntity.Entity.Id.ToString();
   }
 
-  public string BuildAuthUrl()
+  public async Task<string> BuildAuthUrl()
   {
     const string baseAuthUri = "https://accounts.google.com/o/oauth2/v2/auth";
     string[] scopes =
@@ -63,7 +71,7 @@ public class GoogleService
       "https://www.googleapis.com/auth/youtube.readonly",
       "https://www.googleapis.com/auth/userinfo.profile"
     ];
-    var nonce = GenerateAuthNonce(scopes);
+    var nonce = await GenerateAuthNonce(scopes);
     var authUriQueryParams = new Dictionary<string, string>
     {
       ["client_id"] = settings.Google.ClientId,
@@ -71,7 +79,8 @@ public class GoogleService
       ["response_type"] = "code",
       ["scope"] = string.Join(" ", scopes), // add the scopes you need
       ["access_type"] = "offline", // request a refresh token
-      ["state"] = nonce
+      ["state"] = nonce,
+      ["prompt"] = "consent" // force to show consent screen every time
     };
 
     var authUri = $"{baseAuthUri}?{string.Join("&", authUriQueryParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"))}";
@@ -81,7 +90,7 @@ public class GoogleService
 
   public async Task<(TokenResponse? response, string? error)> GetAccessTokenAsync(string code, string state)
   {
-    var authCode = issuedCodes.GetValueOrDefault(state);
+    var authCode = await dbContext.AuthCodes.FindAsync(Guid.Parse(state));
     if (authCode is null)
     {
       return (null, "Invalid state parameter.");

@@ -291,7 +291,7 @@ public class AuthController : ControllerBase
 
     return Ok(new
     {
-      token = token,
+      token,
       userName = userName ?? error
     });
   }

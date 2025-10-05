@@ -9,6 +9,7 @@ namespace Auth.Db
   {
     public DbSet<User> Users { get; init; }
     public DbSet<SecurityGroup> SecurityGroups { get; init; }
+    public DbSet<AuthCode> AuthCodes { get; init; }
 
     public MongoDbContext(MongoClient client)
      : base(new DbContextOptionsBuilder<MongoDbContext>().UseMongoDB(client, "main").Options)
@@ -21,6 +22,7 @@ namespace Auth.Db
       base.OnModelCreating(modelBuilder);
       modelBuilder.Entity<User>().ToCollection("users");
       modelBuilder.Entity<SecurityGroup>().ToCollection("securityGroups");
+      modelBuilder.Entity<AuthCode>().ToCollection("authCodes");
     }
   }
 }
