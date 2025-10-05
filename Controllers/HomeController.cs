@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using AppConfiguration;
 using Auth;
@@ -49,10 +50,11 @@ public class HomeController : Controller
   [HttpPost]
   [AllowAnonymous]
   [ActionName("google-login-url")]
-  public async Task<IActionResult> GoogleLoginUrl()
+  public async Task<IActionResult> GoogleLoginUrl([FromForm] string accessToken)
   {
-    var url = await googleService.BuildAuthUrl();
+    var url = await googleService.BuildAuthUrl(accessToken);
 
+    HttpContext.Response.Headers.CacheControl.Append("private, max-age=0, s-maxage=0");
     return Ok(new { url });
   }
 
@@ -61,8 +63,10 @@ public class HomeController : Controller
   [ActionName("GoogleLogin")]
   public async Task<IActionResult> GoogleLogin()
   {
-    var url = await googleService.BuildAuthUrl();
+    // toDo: Run login challenge before doing google login to get access token for the user
+    var url = await googleService.BuildAuthUrl("");
 
+    HttpContext.Response.Headers.CacheControl.Append("private, max-age=0, s-maxage=0");
     return Redirect(url);
   }
 

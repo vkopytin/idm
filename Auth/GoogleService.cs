@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Auth.Models;
 using Auth.Models.Google;
 using Idm.Models;
 using Idm.OauthRequest;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Auth.Services;
 
@@ -43,14 +45,14 @@ public class GoogleService
     this.settings = settings;
   }
 
-  private async Task<string> GenerateAuthNonce(IEnumerable<string> requestedScope)
+  private async Task<string> GenerateAuthNonce(IEnumerable<string> requestedScope, string openId)
   {
     var authoCode = new AuthorizationCode
     (
         ClientId: settings.Google.ClientId,
         ClientSecret: settings.Google.ClientSecret,
         RedirectUri: settings.Google.RedirectUri,
-        OpenId: string.Empty,
+        OpenId: openId,
         RequestedScopes: [.. requestedScope],
         CreationTime: DateTime.Now,
         Nonce: string.Empty
@@ -63,15 +65,24 @@ public class GoogleService
     return dbEntity.Entity.Id.ToString();
   }
 
-  public async Task<string> BuildAuthUrl()
+  public async Task<string> BuildAuthUrl(string accessToken)
   {
+    var handler = new JwtSecurityTokenHandler();
+    var jwt = handler.ReadJwtToken(accessToken);
+    var securityGroupId = jwt.Claims.FirstOrDefault(c => c.Type == "oid")?.Value;
+
+    if (string.IsNullOrEmpty(securityGroupId))
+    {
+      //throw new Exception("Invalid access token: missing oid claim.");
+    }
+
     const string baseAuthUri = "https://accounts.google.com/o/oauth2/v2/auth";
     string[] scopes =
     [
       "https://www.googleapis.com/auth/youtube.readonly",
       "https://www.googleapis.com/auth/userinfo.profile"
     ];
-    var nonce = await GenerateAuthNonce(scopes);
+    var nonce = await GenerateAuthNonce(scopes, securityGroupId ?? string.Empty);
     var authUriQueryParams = new Dictionary<string, string>
     {
       ["client_id"] = settings.Google.ClientId,
@@ -125,6 +136,12 @@ public class GoogleService
     {
       return (null, "Failed to parse access token response.");
     }
+
+    var authToken = token.ToModel();
+    authToken.Id = authCode.Id;
+    authToken.SecurityGroupId = authCode.OpenId;
+    dbContext.AuthTokens.Add(authToken);
+    await dbContext.SaveChangesAsync();
 
     return (token, null);
   }

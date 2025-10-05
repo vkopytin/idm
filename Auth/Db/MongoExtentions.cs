@@ -1,4 +1,5 @@
 using Auth.Models;
+using Auth.Models.Google;
 using Idm.Models;
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
@@ -27,6 +28,18 @@ public static class MongoExtensions
       CreationTime = code.CreationTime,
       UserId = code.UserId,
       IsOpenId = !string.IsNullOrEmpty(code.OpenId)
+    };
+  }
+
+  public static AuthToken ToModel(this TokenResponse token)
+  {
+    return new AuthToken
+    {
+      AccessToken = token.AccessToken,
+      RefreshToken = token.RefreshToken,
+      Expiration = DateTime.Now.AddSeconds(token.ExpiresIn),
+      TokenType = token.TokenType,
+      Scopes = token.Scope.Split(' '),
     };
   }
 }
