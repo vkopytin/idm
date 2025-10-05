@@ -47,10 +47,20 @@ public class HomeController : Controller
 
   [HttpPost]
   [AllowAnonymous]
-  [ActionName("GoogleLogin")]
-  public IActionResult GoogleLogin(OpenIdConnectLoginRequest loginRequest)
+  [ActionName("google-login-url")]
+  public IActionResult GoogleLoginUrl()
   {
-    var url = googleService.BuildAuthUrl(loginRequest);
+    var url = googleService.BuildAuthUrl();
+
+    return Ok(new { url });
+  }
+
+  [HttpPost]
+  [AllowAnonymous]
+  [ActionName("GoogleLogin")]
+  public IActionResult GoogleLogin()
+  {
+    var url = googleService.BuildAuthUrl();
 
     return Redirect(url);
   }

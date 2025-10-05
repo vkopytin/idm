@@ -271,14 +271,14 @@ public class AuthController : ControllerBase
 
   [AllowAnonymous]
   [HttpGet]
-  public async Task<IActionResult> GoogleLogin([FromQuery] string code, [FromQuery] string scope)
+  public async Task<IActionResult> GoogleLogin([FromQuery] string code, [FromQuery] string scope, [FromQuery] string state)
   {
     if (string.IsNullOrEmpty(code))
     {
       return BadRequest(new { message = "Code is missing" });
     }
 
-    var (token, tokenError) = await googleService.GetAccessTokenAsync(code);
+    var (token, tokenError) = await googleService.GetAccessTokenAsync(code, state);
     if (token is null)
     {
       logger.LogError("Google login error: {error}.",

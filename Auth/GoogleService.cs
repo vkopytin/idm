@@ -1,7 +1,9 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AppConfiguration;
 using Auth.Models.Google;
+using Idm.Models;
 using Idm.OauthRequest;
 
 namespace Auth.Services;
@@ -23,6 +25,7 @@ record Source(string Type, string Id);
 
 public class GoogleService
 {
+  private readonly ConcurrentDictionary<string, AuthorizationCode> issuedCodes = new();
   private readonly HttpClient httpClient;
   private readonly MainSettings settings;
 
@@ -32,16 +35,43 @@ public class GoogleService
     this.settings = settings;
   }
 
-  public string BuildAuthUrl(OpenIdConnectLoginRequest options)
+  private string GenerateAuthNonce(IEnumerable<string> requestedScope)
+  {
+    var nonce = Guid.NewGuid().ToString();
+
+    var authoCode = new AuthorizationCode
+    (
+        ClientId: settings.Google.ClientId,
+        ClientSecret: settings.Google.ClientSecret,
+        RedirectUri: settings.Google.RedirectUri,
+        OpenId: string.Empty,
+        RequestedScopes: [.. requestedScope],
+        CreationTime: DateTime.Now,
+        Nonce: string.Empty
+    );
+
+    issuedCodes[nonce] = authoCode;
+
+    return nonce;
+  }
+
+  public string BuildAuthUrl()
   {
     const string baseAuthUri = "https://accounts.google.com/o/oauth2/v2/auth";
+    string[] scopes =
+    [
+      "https://www.googleapis.com/auth/youtube.readonly",
+      "https://www.googleapis.com/auth/userinfo.profile"
+    ];
+    var nonce = GenerateAuthNonce(scopes);
     var authUriQueryParams = new Dictionary<string, string>
     {
       ["client_id"] = settings.Google.ClientId,
-      ["redirect_uri"] = settings.Google.RedirectUri,
+      ["redirect_uri"] = $"{settings.Google.RedirectUri}",
       ["response_type"] = "code",
-      ["scope"] = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/userinfo.profile", // add the scopes you need
-      ["access_type"] = "offline" // request a refresh token
+      ["scope"] = string.Join(" ", scopes), // add the scopes you need
+      ["access_type"] = "offline", // request a refresh token
+      ["state"] = nonce
     };
 
     var authUri = $"{baseAuthUri}?{string.Join("&", authUriQueryParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"))}";
@@ -49,15 +79,21 @@ public class GoogleService
     return authUri;
   }
 
-  public async Task<(TokenResponse? response, string? error)> GetAccessTokenAsync(string code)
+  public async Task<(TokenResponse? response, string? error)> GetAccessTokenAsync(string code, string state)
   {
+    var authCode = issuedCodes.GetValueOrDefault(state);
+    if (authCode is null)
+    {
+      return (null, "Invalid state parameter.");
+    }
+
     const string tokenUri = "https://oauth2.googleapis.com/token";
     var tokenRequestParams = new Dictionary<string, string>
     {
       ["code"] = code,
-      ["client_id"] = settings.Google.ClientId,
-      ["client_secret"] = settings.Google.ClientSecret,
-      ["redirect_uri"] = settings.Google.RedirectUri,
+      ["client_id"] = authCode.ClientId,
+      ["client_secret"] = authCode.ClientSecret,
+      ["redirect_uri"] = authCode.RedirectUri,
       ["grant_type"] = "authorization_code"
     };
 
