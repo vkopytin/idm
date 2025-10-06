@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using AppConfiguration;
@@ -52,7 +53,16 @@ public class HomeController : Controller
   [ActionName("google-login-url")]
   public async Task<IActionResult> GoogleLoginUrl([FromForm] string accessToken)
   {
-    var url = await googleService.BuildAuthUrl(accessToken);
+    var handler = new JwtSecurityTokenHandler();
+    var jwt = handler.ReadJwtToken(accessToken);
+    var openId = jwt.Claims.FirstOrDefault(c => c.Type == "oid")?.Value;
+
+    if (string.IsNullOrEmpty(openId))
+    {
+      return BadRequest("Invalid access token: missing oid claim.");
+    }
+
+    var url = await googleService.BuildAuthUrl(openId);
 
     HttpContext.Response.Headers.CacheControl.Append("private, max-age=0, s-maxage=0");
     return Ok(new { url });
@@ -61,10 +71,21 @@ public class HomeController : Controller
   [HttpPost]
   [AllowAnonymous]
   [ActionName("GoogleLogin")]
-  public async Task<IActionResult> GoogleLogin()
+  public async Task<IActionResult> GoogleLogin(OpenIdConnectLoginRequest loginRequest)
   {
+    if (string.IsNullOrEmpty(loginRequest.UserName))
+    {
+      return BadRequest(new { message = "Email address needs to entered" });
+    }
+    else if (string.IsNullOrEmpty(loginRequest.Password))
+    {
+      return BadRequest(new { message = "Password needs to entered" });
+    }
+
+    var (user, loginError) = await authService.Login(loginRequest.UserName, loginRequest.Password, "read:user-info read:files");
+
     // toDo: Run login challenge before doing google login to get access token for the user
-    var url = await googleService.BuildAuthUrl("");
+    var url = await googleService.BuildAuthUrl(user.SecurityGroupId.ToString());
 
     HttpContext.Response.Headers.CacheControl.Append("private, max-age=0, s-maxage=0");
     return Redirect(url);

@@ -65,24 +65,15 @@ public class GoogleService
     return dbEntity.Entity.Id.ToString();
   }
 
-  public async Task<string> BuildAuthUrl(string accessToken)
+  public async Task<string> BuildAuthUrl(string openId)
   {
-    var handler = new JwtSecurityTokenHandler();
-    var jwt = handler.ReadJwtToken(accessToken);
-    var securityGroupId = jwt.Claims.FirstOrDefault(c => c.Type == "oid")?.Value;
-
-    if (string.IsNullOrEmpty(securityGroupId))
-    {
-      //throw new Exception("Invalid access token: missing oid claim.");
-    }
-
     const string baseAuthUri = "https://accounts.google.com/o/oauth2/v2/auth";
     string[] scopes =
     [
       "https://www.googleapis.com/auth/youtube.readonly",
       "https://www.googleapis.com/auth/userinfo.profile"
     ];
-    var nonce = await GenerateAuthNonce(scopes, securityGroupId ?? string.Empty);
+    var nonce = await GenerateAuthNonce(scopes, openId);
     var authUriQueryParams = new Dictionary<string, string>
     {
       ["client_id"] = settings.Google.ClientId,
