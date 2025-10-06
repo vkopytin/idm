@@ -10,6 +10,7 @@ public class AuthToken
   [BsonId]
   [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
   public Guid Id { get; set; }
+  public string CreatedAt { get; set; } = DateTime.UtcNow.ToString("o");
   public string AccessToken { get; set; }
   public string RefreshToken { get; set; }
   public DateTime Expiration { get; set; }
