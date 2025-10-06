@@ -85,7 +85,9 @@ public class GoogleService
       ["prompt"] = "consent" // force to show consent screen every time
     };
 
-    var authUri = $"{baseAuthUri}?{string.Join("&", authUriQueryParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"))}";
+    var authUri = $"{baseAuthUri}?{string.Join("&",
+      authUriQueryParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}")
+    )}";
 
     return authUri;
   }
