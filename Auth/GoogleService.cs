@@ -49,13 +49,13 @@ public class GoogleService
   {
     var authoCode = new AuthorizationCode
     (
-        ClientId: settings.Google.ClientId,
-        ClientSecret: settings.Google.ClientSecret,
-        RedirectUri: settings.Google.RedirectUri,
-        OpenId: openId,
-        RequestedScopes: [.. requestedScope],
-        CreationTime: DateTime.Now,
-        Nonce: string.Empty
+      ClientId: settings.Google.ClientId,
+      ClientSecret: settings.Google.ClientSecret,
+      RedirectUri: settings.Google.RedirectUri,
+      OpenId: openId,
+      RequestedScopes: [.. requestedScope],
+      CreationTime: DateTime.Now,
+      Nonce: string.Empty
     );
 
     var dbEntity = dbContext.AuthCodes.Add(authoCode.ToModel());

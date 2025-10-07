@@ -19,6 +19,7 @@ public static class MongoExtensions
   {
     return new AuthCode
     {
+      Id = Guid.NewGuid(),
       ClientId = code.ClientId,
       ClientSecret = code.ClientSecret,
       RedirectUri = code.RedirectUri,
