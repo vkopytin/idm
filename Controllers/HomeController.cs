@@ -84,7 +84,11 @@ public class HomeController : Controller
 
     var (user, loginError) = await authService.Login(loginRequest.UserName, loginRequest.Password, "read:user-info read:files");
 
-    // toDo: Run login challenge before doing google login to get access token for the user
+    if (loginError is not null || user is null)
+    {
+      return RedirectToAction("Error", new { error = "invalid_login" });
+    }
+
     var url = await googleService.BuildAuthUrl(user.SecurityGroupId.ToString());
 
     HttpContext.Response.Headers.CacheControl.Append("private, max-age=0, s-maxage=0");
@@ -125,8 +129,9 @@ public class HomeController : Controller
       return RedirectToAction("Error", new { error = "invalid_login" });
     }
 
-    var (_, updateCodeError) = await authService.UpdatedClientDataByCode(loginRequest.Code, loginRequest.RequestedScopes,
-        user, loginRequest.Nonce);
+    var (_, updateCodeError) = await authService.UpdatedClientDataByCode(
+      loginRequest.Code, loginRequest.RequestedScopes, user, loginRequest.Nonce
+    );
 
     if (updateCodeError is not null)
     {
