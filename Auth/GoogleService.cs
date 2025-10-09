@@ -70,7 +70,7 @@ public class GoogleService
     const string baseAuthUri = "https://accounts.google.com/o/oauth2/v2/auth";
     string[] scopes =
     [
-      "https://www.googleapis.com/auth/youtube.readonly",
+      "https://www.googleapis.com/auth/youtube",
       "https://www.googleapis.com/auth/userinfo.profile"
     ];
     var nonce = await GenerateAuthNonce(scopes, openId);
