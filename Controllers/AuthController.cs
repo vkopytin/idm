@@ -324,6 +324,16 @@ public class AuthController : ControllerBase
         );
         return Ok("0");
       }
+
+      try
+      {
+        await this.googleService.RefreshGoogleTokenIfNeeded(refreshTokenResult.code);
+      }
+      catch (Exception ex)
+      {
+        logger.LogError("Error refreshing Google token: {error}.", ex.Message);
+      }
+
       return Ok(refreshTokenResult);
     }
 

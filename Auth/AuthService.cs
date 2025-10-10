@@ -235,8 +235,9 @@ public class AuthService : IAuthService
     var accessToken = GenerateAccessToken(clientCodeChecker, client.ClientUri);
     var refreshToken = GenerateRefreshToken(clientCodeChecker, user.UserName);
 
-    // here remoce the code from the Concurrent Dictionary
-    RemoveClientDataByCode(request.Code);
+    // toDO: find how to here remove the code from the Concurrent Dictionary
+    // and use for google token renew another approach
+    //RemoveClientDataByCode(request.Code);
 
     var since = EpochTime.GetIntDate(DateTime.Now);
     var expiresIn = long.Parse(accessToken.Claims.First(claim => claim.Type.Equals("exp")).Value);

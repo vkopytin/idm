@@ -194,14 +194,14 @@ public class GoogleService
 
   public async Task RefreshGoogleTokenIfNeeded(string code)
   {
-    var token = await dbContext.AuthTokens.FindAsync(Guid.Parse(code));
-    if (token is null)
+    var authCode = await dbContext.AuthCodes.FindAsync(Guid.Parse(code));
+    if (authCode is null)
     {
       return;
     }
 
     var authTokenQuery = from at in dbContext.AuthTokens
-                         where at.SecurityGroupId == token.SecurityGroupId
+                         where at.SecurityGroupId == authCode.OpenId
                          orderby at.Expiration descending
                          select at;
 
