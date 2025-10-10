@@ -23,7 +23,6 @@ using static Idm.OauthResponse.ErrorTypeEnum;
 
 public class AuthService : IAuthService
 {
-  private readonly ConcurrentDictionary<string, AuthorizationCode> issuedCodes = new ConcurrentDictionary<string, AuthorizationCode>();
   private readonly MongoDbContext dbContext;
   private readonly IAccountService accountService;
   private readonly JwtOptions jwtOptions;
@@ -130,7 +129,7 @@ public class AuthService : IAuthService
       return (null, new(InvalidScope, "scopes are invalid"));
     }
 
-    var code = GenerateAuthorizationCode(client, clientScopes.ToArray(), authorizationRequest.nonce);
+    var code = await GenerateAuthorizationCode(client, clientScopes.ToArray(), authorizationRequest.nonce);
     if (code == null)
     {
       return (null, new(TemporarilyUnAvailable));
@@ -152,7 +151,7 @@ public class AuthService : IAuthService
       string key, IEnumerable<string> requestdScopes, User user, string nonce
   )
   {
-    var oldValue = GetClientDataByCode(key);
+    var oldValue = await GetClientDataByCode(key);
 
     if (oldValue is null)
     {
@@ -174,21 +173,23 @@ public class AuthService : IAuthService
       return (null, new(InvalidScope));
     }
 
-    var newValue = oldValue with
-    {
-      IsOpenId = true,
-      RequestedScopes = requestdScopes.ToArray(),
-      Nonce = nonce,
-      UserId = user.UserName,
-      OpenId = user.SecurityGroupId.ToString() ?? ""
-    };
+    var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
 
-    if (issuedCodes.TryUpdate(key, newValue, oldValue))
+    if (existing is null)
     {
-      return (newValue, null);
+      return (null, new(InvalidCode));
     }
 
-    return (null, new(InvalidCode));
+    existing.IsOpenId = true;
+    existing.RequestedScopes = requestdScopes.ToArray();
+    existing.Nonce = nonce;
+    existing.UserId = user.UserName;
+    existing.OpenId = user.SecurityGroupId.ToString() ?? "";
+
+    dbContext.AuthCodes.Update(existing);
+    await dbContext.SaveChangesAsync();
+
+    return (AuthorizationCode.FromModel(existing), null);
   }
 
   public async Task<(TokenResponse?, AuthError?)> GenerateToken(TokenRequest request)
@@ -205,7 +206,7 @@ public class AuthService : IAuthService
     }
 
     // check code from the Concurrent Dictionary
-    var clientCodeChecker = GetClientDataByCode(request.Code);
+    var clientCodeChecker = await GetClientDataByCode(request.Code);
     if (clientCodeChecker is null)
     {
       return (null, new(InvalidGrant, "Can't find the login information"));
@@ -273,7 +274,7 @@ public class AuthService : IAuthService
     {
       return (null, new(InvalidScope, "Can't get valid scope from the provided principal"));
     }
-    var authCodeId = GenerateAuthorizationCode(client, scopesClaim.Value.Split(' '), refreshToken);
+    var authCodeId = await GenerateAuthorizationCode(client, scopesClaim.Value.Split(' '), refreshToken);
     (var code, err) = await UpdatedClientDataByCode(authCodeId, scopesClaim.Value.Split(' '), user, string.Empty);
     if (code is null)
     {
@@ -325,9 +326,9 @@ public class AuthService : IAuthService
     ), null);
   }
 
-  private string GenerateAuthorizationCode(Client client, IEnumerable<string> requestedScope, string nonce)
+  private async Task<string> GenerateAuthorizationCode(Client client, IEnumerable<string> requestedScope, string nonce)
   {
-    var code = Guid.NewGuid().ToString();
+    var code = Guid.NewGuid();
 
     var authoCode = new AuthorizationCode
     (
@@ -340,18 +341,20 @@ public class AuthService : IAuthService
         Nonce: nonce
     );
 
-    // then store the code is the Concurrent Dictionary
-    issuedCodes[code] = authoCode;
+    var record = authoCode.ToModel();
+    record.Id = code;
+    await dbContext.AuthCodes.AddAsync(record);
+    await dbContext.SaveChangesAsync();
 
-    return code;
-
+    return code.ToString();
   }
 
-  private AuthorizationCode? GetClientDataByCode(string key)
+  private async Task<AuthorizationCode?> GetClientDataByCode(string key)
   {
-    if (issuedCodes.TryGetValue(key, out var authorizationCode))
+    var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
+    if (existing is not null)
     {
-      return authorizationCode;
+      return AuthorizationCode.FromModel(existing);
     }
 
     return null;
@@ -359,7 +362,15 @@ public class AuthService : IAuthService
 
   private AuthorizationCode? RemoveClientDataByCode(string key)
   {
-    issuedCodes.TryRemove(key, out var authorizationCode);
+    var existing = dbContext.AuthCodes.Find(Guid.Parse(key));
+    if (existing is null)
+    {
+      return null;
+    }
+
+    var authorizationCode = AuthorizationCode.FromModel(existing);
+    dbContext.AuthCodes.Remove(existing);
+    dbContext.SaveChanges();
 
     return authorizationCode;
   }

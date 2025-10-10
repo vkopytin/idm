@@ -1,3 +1,5 @@
+using Auth.Models;
+
 namespace Idm.Models;
 
 public record AuthorizationCode
@@ -13,4 +15,23 @@ public record AuthorizationCode
   string OpenId,
   string? UserId = null,
   bool IsOpenId = true
-);
+)
+{
+  internal static AuthorizationCode? FromModel(AuthCode existing)
+  {
+    if (existing is null) return null;
+
+    return new AuthorizationCode
+    (
+      ClientId: existing.ClientId,
+      ClientSecret: existing.ClientSecret,
+      RedirectUri: existing.RedirectUri,
+      RequestedScopes: existing.RequestedScopes,
+      CreationTime: existing.CreationTime,
+      Nonce: existing.Nonce,
+      OpenId: existing.OpenId,
+      UserId: existing.UserId,
+      IsOpenId: existing.IsOpenId
+    );
+  }
+}
