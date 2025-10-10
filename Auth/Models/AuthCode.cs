@@ -21,4 +21,5 @@ public class AuthCode
   public string OpenId { get; set; }
   public string? UserId { get; set; }
   public bool IsOpenId { get; set; }
+  public string? BackUrl { get; set; }
 }

@@ -28,7 +28,8 @@ public static class MongoExtensions
       RequestedScopes = code.RequestedScopes.ToArray(),
       CreationTime = code.CreationTime,
       UserId = code.UserId,
-      IsOpenId = !string.IsNullOrEmpty(code.OpenId)
+      IsOpenId = !string.IsNullOrEmpty(code.OpenId),
+      BackUrl = code.BackUrl
     };
   }
 

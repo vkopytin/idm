@@ -14,7 +14,9 @@ public record AuthorizationCode
   string Nonce,
   string OpenId,
   string? UserId = null,
-  bool IsOpenId = true
+  bool IsOpenId = true,
+
+  string? BackUrl = null
 )
 {
   internal static AuthorizationCode? FromModel(AuthCode existing)

@@ -12,5 +12,7 @@ public record TokenResponse(
   [property: JsonPropertyName("scope")]
   string Scope,
   [property: JsonPropertyName("refresh_token")]
-  string RefreshToken
+  string RefreshToken,
+  [property: JsonPropertyName("backUrl")]
+  string BackUrl = ""
 );

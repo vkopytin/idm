@@ -287,13 +287,12 @@ public class AuthController : ControllerBase
       return BadRequest(new { message = "Google login unsuccessful" });
     }
 
-    var (userName, error) = await googleService.ListYoutubeSubscriptions(token);
-
-    return Ok(new
+    if (string.IsNullOrEmpty(token.BackUrl))
     {
-      token,
-      userName = userName ?? error
-    });
+      return Ok(token);
+    }
+
+    return Redirect(token.BackUrl);
   }
 
   [AllowAnonymous]
@@ -335,7 +334,7 @@ public class AuthController : ControllerBase
       logger.LogError("Make token error: {error}. Message: {message}",
           tokenError?.Error.GetEnumDescription(), tokenError?.Message
       );
-      return Ok("0");
+      return Ok(new { message = tokenError?.Message ?? "Error generating token" });
     }
 
     return Ok(tokenResult);

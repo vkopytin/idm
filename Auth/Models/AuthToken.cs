@@ -17,4 +17,5 @@ public class AuthToken
   public string SecurityGroupId { get; set; }
   public string[] Scopes { get; set; } = [];
   public string TokenType { get; set; } = "Bearer";
+  public string? BackUrl { get; set; }
 }

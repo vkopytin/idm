@@ -45,7 +45,7 @@ public class GoogleService
     this.settings = settings;
   }
 
-  private async Task<string> GenerateAuthNonce(IEnumerable<string> requestedScope, string openId)
+  private async Task<string> GenerateAuthNonce(IEnumerable<string> requestedScope, string openId, string? backUrl = null)
   {
     var authoCode = new AuthorizationCode
     (
@@ -55,7 +55,8 @@ public class GoogleService
       OpenId: openId,
       RequestedScopes: [.. requestedScope],
       CreationTime: DateTime.Now,
-      Nonce: string.Empty
+      Nonce: string.Empty,
+      BackUrl: backUrl
     );
 
     var dbEntity = dbContext.AuthCodes.Add(authoCode.ToModel());
@@ -65,7 +66,7 @@ public class GoogleService
     return dbEntity.Entity.Id.ToString();
   }
 
-  public async Task<string> BuildAuthUrl(string openId)
+  public async Task<string> BuildAuthUrl(string openId, string? backUrl = null)
   {
     const string baseAuthUri = "https://accounts.google.com/o/oauth2/v2/auth";
     string[] scopes =
@@ -73,7 +74,7 @@ public class GoogleService
       "https://www.googleapis.com/auth/youtube",
       "https://www.googleapis.com/auth/userinfo.profile"
     ];
-    var nonce = await GenerateAuthNonce(scopes, openId);
+    var nonce = await GenerateAuthNonce(scopes, openId, backUrl);
     var authUriQueryParams = new Dictionary<string, string>
     {
       ["client_id"] = settings.Google.ClientId,
@@ -134,6 +135,7 @@ public class GoogleService
     authToken.Id = authCode.Id;
     authToken.SecurityGroupId = authCode.OpenId;
     dbContext.AuthTokens.Add(authToken);
+    authToken.BackUrl = authCode.BackUrl;
     await dbContext.SaveChangesAsync();
 
     return (token, null);

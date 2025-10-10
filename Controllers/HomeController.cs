@@ -51,7 +51,7 @@ public class HomeController : Controller
   [HttpPost]
   [AllowAnonymous]
   [ActionName("google-login-url")]
-  public async Task<IActionResult> GoogleLoginUrl([FromForm] string accessToken)
+  public async Task<IActionResult> GoogleLoginUrl([FromForm] string accessToken, [FromForm] string? backUrl = null)
   {
     var handler = new JwtSecurityTokenHandler();
     var jwt = handler.ReadJwtToken(accessToken);
@@ -62,7 +62,7 @@ public class HomeController : Controller
       return BadRequest("Invalid access token: missing oid claim.");
     }
 
-    var url = await googleService.BuildAuthUrl(openId);
+    var url = await googleService.BuildAuthUrl(openId, backUrl);
 
     HttpContext.Response.Headers.CacheControl.Append("private, max-age=0, s-maxage=0");
     return Ok(new { url });
@@ -89,9 +89,10 @@ public class HomeController : Controller
       return RedirectToAction("Error", new { error = "invalid_login" });
     }
 
-    var url = await googleService.BuildAuthUrl(user.SecurityGroupId.ToString());
+    var url = await googleService.BuildAuthUrl(user.SecurityGroupId.ToString(), "/");
 
     HttpContext.Response.Headers.CacheControl.Append("private, max-age=0, s-maxage=0");
+
     return Redirect(url);
   }
 
