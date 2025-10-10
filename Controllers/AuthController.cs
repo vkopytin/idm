@@ -337,6 +337,8 @@ public class AuthController : ControllerBase
       return Ok(new { message = tokenError?.Message ?? "Error generating token" });
     }
 
+    await this.googleService.RefreshGoogleTokenIfNeeded(tokenResult.code);
+
     return Ok(tokenResult);
   }
 

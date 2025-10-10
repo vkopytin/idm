@@ -10,6 +10,7 @@ using Auth.Models.Google;
 using Idm.Models;
 using Idm.OauthRequest;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Services;
 
@@ -191,4 +192,62 @@ public class GoogleService
     return (userInfo.Names[0].DisplayName, null);
   }
 
+  public async Task RefreshGoogleTokenIfNeeded(string code)
+  {
+    var token = await dbContext.AuthTokens.FindAsync(Guid.Parse(code));
+    if (token is null)
+    {
+      return;
+    }
+
+    var authTokenQuery = from at in dbContext.AuthTokens
+                         where at.SecurityGroupId == token.SecurityGroupId
+                         orderby at.Expiration descending
+                         select at;
+
+    var authToken = await authTokenQuery.FirstOrDefaultAsync();
+    if (authToken is null)
+    {
+      return;
+    }
+
+    if (authToken.Expiration > DateTime.UtcNow.AddMinutes(5))
+    {
+      return; // Token is still valid for more than 5 minutes
+    }
+
+    const string tokenUri = "https://oauth2.googleapis.com/token";
+    var tokenRequestParams = new Dictionary<string, string>
+    {
+      ["client_id"] = settings.Google.ClientId,
+      ["client_secret"] = settings.Google.ClientSecret,
+      ["refresh_token"] = authToken.RefreshToken,
+      ["grant_type"] = "refresh_token"
+    };
+
+    var tokenRequest = new HttpRequestMessage(HttpMethod.Post, tokenUri)
+    {
+      Content = new FormUrlEncodedContent(tokenRequestParams)
+    };
+
+    var tokenResponse = await httpClient.SendAsync(tokenRequest);
+    var tokenResponseContent = await tokenResponse.Content.ReadAsStringAsync();
+
+    if (tokenResponse.IsSuccessStatusCode is false)
+    {
+      return;
+    }
+
+    var newToken = JsonSerializer.Deserialize<TokenResponse>(tokenResponseContent);
+
+    if (newToken is null)
+    {
+      return;
+    }
+
+    authToken.AccessToken = newToken.AccessToken;
+    authToken.Expiration = DateTime.UtcNow.AddSeconds(newToken.ExpiresIn);
+    dbContext.AuthTokens.Update(authToken);
+    await dbContext.SaveChangesAsync();
+  }
 }
