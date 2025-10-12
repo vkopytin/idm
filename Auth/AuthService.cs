@@ -283,13 +283,13 @@ public class AuthService : IAuthService
     }
 
     return await GenerateToken(new(
-        ClientId: client.ClientId,
-        GrantType: "refresh_token",
-        ClientSecret: client.ClientSecret,
-        Code: authCodeId,
-        RedirectUri: null,
-        CodeVerifier: null,
-        RefreshToken: null
+      ClientId: client.ClientId,
+      GrantType: "refresh_token",
+      ClientSecret: client.ClientSecret,
+      Code: authCodeId,
+      RedirectUri: null,
+      CodeVerifier: null,
+      RefreshToken: null
     ));
   }
 
@@ -306,24 +306,24 @@ public class AuthService : IAuthService
     var credentials_at = new SigningCredentials(key_at, SecurityAlgorithms.HmacSha256);
     int iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
     Claim[] claims_at = [
-        new("iss", client.ClientUri),
-            new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
-            new("scopes", string.Join(' ', client.AllowedScopes)),
-            new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
-        ];
+      new("iss", client.ClientUri),
+      new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
+      new("scopes", string.Join(' ', client.AllowedScopes)),
+      new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
+    ];
     var accessToken = new JwtSecurityToken(jwtOptions.Issuer, request.ClientId, claims_at, signingCredentials: credentials_at,
-        expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes));
+      expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes));
 
     var since = EpochTime.GetIntDate(DateTime.Now);
     var expiresIn = long.Parse(accessToken.Claims.First(claim => claim.Type.Equals("exp")).Value);
 
     return (new(
-        access_token: new JwtSecurityTokenHandler().WriteToken(accessToken),
-        id_token: null,
-        refresh_token: null,
-        code: request.Code ?? string.Empty,
-        token_type: "app_token",
-        expires_in: $"{expiresIn - since}"
+      access_token: new JwtSecurityTokenHandler().WriteToken(accessToken),
+      id_token: null,
+      refresh_token: null,
+      code: request.Code ?? string.Empty,
+      token_type: "app_token",
+      expires_in: $"{expiresIn - since}"
     ), null);
   }
 
@@ -400,7 +400,7 @@ public class AuthService : IAuthService
       bool hasSamesecretId = client.ClientSecret.Equals(clientSecret, StringComparison.InvariantCulture);
       if (!hasSamesecretId)
       {
-        return (null, new(InvalidClient));
+        return (null, new(InvalidClient, "Client secret is not valid"));
       }
     }
 
@@ -409,7 +409,7 @@ public class AuthService : IAuthService
       return (client, null);
     }
 
-    return (null, new(UnAuthoriazedClient));
+    return (null, new(UnAuthoriazedClient, "Client is not active"));
   }
 
   private JwtSecurityToken GenerateIdToken(AuthorizationCode authorizationCode, User user)

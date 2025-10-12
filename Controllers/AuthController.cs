@@ -367,7 +367,7 @@ public class AuthController : ControllerBase
     var (appToken, tokenError) = await authService.GenerateAppToken(request);
     if (appToken is null)
     {
-      return Ok(tokenError);
+      return BadRequest(tokenError);
     }
 
     return Ok(appToken);
