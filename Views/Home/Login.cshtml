@@ -45,7 +45,9 @@
         <a href="#" style="display: none;">Lost your password?</a>
         @foreach (var i in Model.RequestedScopes)
         {
-          <span class="badge badge-success text-base-content/60 flex items-center gap-2 text-xs">@i &nbsp;</span>
+          <span class="badge badge-success text-base-content/60 flex items-center gap-2 text-xs">
+            @i &nbsp;
+          </span>
         }
       </p>
     </div>
