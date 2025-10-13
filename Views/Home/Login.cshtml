@@ -41,13 +41,13 @@
   </figure>
   <div class="card-body">
     <div class="card-actions justify-end">
-      <div class="pass-link">
+      <p class="pass-link">
         <a href="#" style="display: none;">Lost your password?</a>
         @foreach (var i in Model.RequestedScopes)
         {
-          <span class="badge badge-success">@i &nbsp;</span>
+          <span class="badge badge-success text-base-content/60 flex items-center gap-2 text-xs">@i &nbsp;</span>
         }
-      </div>
+      </p>
     </div>
   </div>
 </div>
