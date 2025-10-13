@@ -3,94 +3,8 @@
   ViewData["Title"] = "Login";
   Layout = "~/Views/Shared/_Layout.cshtml";
 }
-<style>
-  * {
-    box-sizing: border-box;
-  }
-
-  body {
-    background-color: #3498DB;
-    font-family: "Arial", sans-serif;
-    padding: 50px;
-  }
-
-  .container {
-    margin: 20px auto;
-    padding: 10px;
-    width: 300px;
-    background-color: #fff;
-    border-radius: 5px;
-  }
-
-  h1 {
-    width: 70%;
-    color: #777;
-    font-size: 32px;
-    margin: 28px auto;
-    margin-bottom: 20px;
-    text-align: center;
-    /*padding-top: 40px;*/
-  }
-
-  form {
-    /*padding: 15px;*/
-    text-align: center;
-  }
-
-  input {
-    padding: 12px 0;
-    margin-bottom: 10px;
-    border-radius: 3px;
-    border: 2px solid transparent;
-    text-align: center;
-    width: 90%;
-    font-size: 16px;
-    transition: border .2s, background-color .2s;
-  }
-
-  form label {
-    width: 100%;
-    display: block;
-    text-align: left;
-    margin: 6px 0px 6px 24px;
-  }
-
-  form .field {
-    background-color: #ECF0F1;
-    text-align: left;
-    padding-left: 8px;
-  }
-
-  form .field:focus {
-    border: 2px solid #3498DB;
-  }
-
-  form .btn {
-    background-color: #3498DB;
-    color: #fff;
-    line-height: 25px;
-    cursor: pointer;
-  }
-
-  form .btn:hover,
-  form .btn:active {
-    background-color: #1F78B4;
-    border: 2px solid #1F78B4;
-  }
-
-  .pass-link {
-    text-align: center;
-  }
-
-  .pass-link a:link,
-  .pass-link a:visited {
-    font-size: 12px;
-    color: #777;
-  }
-</style>
-<div>
-  <div class="container">
-    <h1>Login</h1>
+<div class="card m-auto mt-20 w-96 bg-base-200 border border-base-300 rounded-box">
+  <figure>
     <form asp-action="Login" asp-controller="Home" method="post">
       <input type="hidden" asp-for="RedirectUri" />
       <input type="hidden" asp-for="Code" />
@@ -100,30 +14,40 @@
       {
         <input type="hidden" asp-for="RequestedScopes[i]" />
       }
+      <fieldset class="m-auto fieldset bg-base-200 w-xs p-4">
+        <legend class="fieldset-legend">Login</legend>
 
-      <div>
-        <label for="user-name">User Name</label>
-        <input type="text" id="user-name" asp-for="UserName" class="field" />
-      </div>
+        <label class="label" for="user-name">Email</label>
+        <input type="email" class="input" placeholder="Email" id="user-name" asp-for="UserName" />
 
-      <div>
-        <label for="user-password">Password</label>
-        <input type="password" id="user-password" asp-for="Password" class="field" />
-      </div>
+        <label class="label" for="user-password">Password</label>
+        <input type="password" class="input" placeholder="Password" id="user-password" asp-for="Password" />
 
-      <div>
-        <input type="submit" formaction="Login" value="Login" class="btn" />
+        <div className="text-primary">
+          <a class="right-full" href="#">
+            <span
+              className="text-sm  inline-block  hover:text-primary hover:underline hover:cursor-pointer transition duration-200">
+              Forgot Secret Code?
+            </span>
+          </a>
+        </div>
+
+        <input type="submit" class="btn btn-neutral mt-4" formaction="Login" value="Login" />
         <a class="btn" href="#">
           <input type="submit" formaction="GoogleLogin" value="Login with Google" />
         </a>
-      </div>
+      </fieldset>
     </form>
-    <div class="pass-link">
-      <a href="#" style="display: none;">Lost your password?</a>
-      @foreach (var i in Model.RequestedScopes)
-      {
-        <span>@i &nbsp;</span>
-      }
+  </figure>
+  <div class="card-body">
+    <div class="card-actions justify-end">
+      <div class="pass-link">
+        <a href="#" style="display: none;">Lost your password?</a>
+        @foreach (var i in Model.RequestedScopes)
+        {
+          <span class="badge badge-success">@i &nbsp;</span>
+        }
+      </div>
     </div>
   </div>
 </div>
