@@ -136,7 +136,7 @@ public class AuthService : IAuthService
     }
 
     return (new(
-        RedirectUri: client.RedirectUri + "?response_type=code" + "&state=" + authorizationRequest.state,
+        RedirectUri: client.RedirectUri + "?response_type=code&state=" + authorizationRequest.state,
         Code: code,
         State: authorizationRequest.state,
         RequestedScopes: clientScopes.ToList(),

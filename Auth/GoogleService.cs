@@ -135,9 +135,14 @@ public class GoogleService
     var authToken = token.ToModel();
     authToken.Id = authCode.Id;
     authToken.SecurityGroupId = authCode.OpenId;
-    dbContext.AuthTokens.Add(authToken);
     authToken.BackUrl = authCode.BackUrl;
+    dbContext.AuthTokens.Add(authToken);
     await dbContext.SaveChangesAsync();
+
+    if (!string.IsNullOrEmpty(authCode.BackUrl))
+    {
+      token = token with { BackUrl = authCode.BackUrl };
+    }
 
     return (token, null);
   }
