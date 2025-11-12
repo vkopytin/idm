@@ -4,8 +4,8 @@ using Auth.Models;
 using Auth.Services;
 using Idm.Common;
 using Idm.Endpoints;
-using Idm.Models;
 using Idm.OauthRequest;
+using Idm.OauthResponse;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -111,7 +111,15 @@ public class AuthController : ControllerBase
       logger.LogError("Register user error: {err}, Message: {message}",
         regUserError?.Error.GetEnumDescription(), regUserError?.Message
       );
-      return BadRequest(new { message = "User registration unsuccessful" });
+      if (regUserError?.Error == ErrorTypeEnum.UserExists)
+      {
+        return Conflict(new { message = "User with the same user name already exists" });
+      }
+      else
+      {
+        return BadRequest(new { message = "User registration unsuccessful" });
+
+      }
     }
 
     var scopes = "read:user-info read:files";
