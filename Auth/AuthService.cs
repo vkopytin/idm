@@ -47,7 +47,7 @@ public class AuthService : IAuthService
       return (null, new AuthError(AccessDeniedInvalidPassword, "wrong password"));
     }
 
-    this.EnsureSecurityGroup(user);
+    await this.EnsureSecurityGroup(user);
 
     var tokenHandler = new JwtSecurityTokenHandler();
     var key = Encoding.ASCII.GetBytes(jwtOptions.SecretKey);
@@ -101,7 +101,7 @@ public class AuthService : IAuthService
       return (null, new AuthError(ErrorCreatingUser, "User was not created"));
     }
 
-    this.EnsureSecurityGroup(createdUser);
+    await this.EnsureSecurityGroup(createdUser);
 
     return (createdUser, null);
   }
@@ -507,7 +507,7 @@ public class AuthService : IAuthService
     return principal;
   }
 
-  private void EnsureSecurityGroup(User user)
+  private async Task EnsureSecurityGroup(User user)
   {
     if (user.SecurityGroupId is not null)
     {
@@ -518,9 +518,9 @@ public class AuthService : IAuthService
     {
       GroupName = user.UserName,
     };
-    dbContext.SecurityGroups.Add(group);
-    dbContext.SaveChanges();
+    await dbContext.SecurityGroups.AddAsync(group);
+    await dbContext.SaveChangesAsync();
     user.SecurityGroupId = group.Id;
-    dbContext.SaveChanges();
+    await dbContext.SaveChangesAsync();
   }
 }
