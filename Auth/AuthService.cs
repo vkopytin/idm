@@ -4,13 +4,10 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using System.Collections.Concurrent;
 using Idm.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography;
 using AppConfiguration;
 using Auth.Errors;
-using DnsClient.Protocol;
 using Idm.Common;
 using Idm.OauthRequest;
 using Idm.OauthResponse;
@@ -54,15 +51,15 @@ public class AuthService : IAuthService
 
     var tokenDescriptor = new SecurityTokenDescriptor
     {
-      Subject = new ClaimsIdentity(
-        [
-            new ("sub", user.Id.ToString()),
-                new ("oid", user.SecurityGroupId.ToString() ?? ""),
-                new (ClaimTypes.Name, user.UserName),
-                new (ClaimTypes.GivenName, user.Name),
-                new (ClaimTypes.Role, user.Role),
-                new ("scopes", scopes)
-        ]),
+      Subject = new ClaimsIdentity([
+        new ("sub", user.Id.ToString()),
+        new ("oid", user.SecurityGroupId.ToString() ?? ""),
+        new ("roles", user.Role),
+        new (ClaimTypes.Name, user.UserName),
+        new (ClaimTypes.GivenName, user.Name),
+        new (ClaimTypes.Role, user.Role),
+        new ("scopes", scopes)
+      ]),
       IssuedAt = DateTime.UtcNow,
       Issuer = jwtOptions.Issuer,
       Audience = jwtOptions.Audience,
@@ -238,7 +235,7 @@ public class AuthService : IAuthService
       idToken = GenerateIdToken(clientCodeChecker, user);
     }
 
-    var accessToken = GenerateAccessToken(clientCodeChecker, client.ClientUri);
+    var accessToken = GenerateAccessToken(clientCodeChecker, client.ClientUri, user.Role);
     var refreshToken = GenerateRefreshToken(clientCodeChecker, user.UserName);
 
     // toDO: find how to here remove the code from the Concurrent Dictionary
@@ -450,7 +447,7 @@ public class AuthService : IAuthService
     );
   }
 
-  private JwtSecurityToken GenerateAccessToken(AuthorizationCode authorizationCode, string clientUri)
+  private JwtSecurityToken GenerateAccessToken(AuthorizationCode authorizationCode, string clientUri, string userRole)
   {
     var tokenExpirationInMinutes = 60;
     var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authorizationCode.ClientSecret));
@@ -458,12 +455,14 @@ public class AuthService : IAuthService
     var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
 
     Claim[] userClaims = [
-        new("oid", authorizationCode.OpenId),
-            new("iss", clientUri),
-            new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
-            new("scopes", string.Join(' ', authorizationCode.RequestedScopes)),
-            new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
-        ];
+      new("jti", Guid.NewGuid().ToString()),
+      new("oid", authorizationCode.OpenId),
+      new("roles", userRole),
+      new("iss", clientUri),
+      new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
+      new("scopes", string.Join(' ', authorizationCode.RequestedScopes)),
+      new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
+    ];
     return new JwtSecurityToken(jwtOptions.Issuer, authorizationCode.ClientId, userClaims, signingCredentials: clientCredentials,
         expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes));
   }
@@ -476,12 +475,13 @@ public class AuthService : IAuthService
     var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
 
     Claim[] userClaims = [
-        new(ClaimTypes.Name, userName),
-            new("sub", authorizationCode.UserId ?? userName),
-            new("scopes", string.Join(' ', authorizationCode.RequestedScopes)),
-            new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
-            new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
-        ];
+      new("jti", Guid.NewGuid().ToString()),
+      new(ClaimTypes.Name, userName),
+      new("sub", authorizationCode.UserId ?? userName),
+      new("scopes", string.Join(' ', authorizationCode.RequestedScopes)),
+      new("iat", iat.ToString(), ClaimValueTypes.Integer), // time stamp
+      new("exp", EpochTime.GetIntDate(DateTime.Now.AddMinutes(tokenExpirationInMinutes)).ToString(), ClaimValueTypes.Integer64),
+    ];
 
     return new JwtSecurityToken(jwtOptions.Issuer, authorizationCode.ClientId, userClaims,
         signingCredentials: clientCredentials,

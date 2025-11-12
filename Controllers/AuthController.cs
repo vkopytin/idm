@@ -118,7 +118,6 @@ public class AuthController : ControllerBase
       else
       {
         return BadRequest(new { message = "User registration unsuccessful" });
-
       }
     }
 
