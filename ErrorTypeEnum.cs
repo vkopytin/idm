@@ -6,6 +6,10 @@ public enum ErrorTypeEnum : byte
 {
   [Description("invalid_request")]
   InvalidRequest,
+  [Description("user_exists")]
+  UserExists,
+  [Description("error_creating_user")]
+  ErrorCreatingUser,
 
   [Description("unauthorized_client")]
   UnAuthoriazedClient,

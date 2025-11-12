@@ -105,7 +105,14 @@ public class AuthController : ControllerBase
 
     var userToRegister = new User(user.UserName, user.Name, user.Password, user.Role);
 
-    var registeredUser = await authService.Register(userToRegister);
+    var (registeredUser, regUserError) = await authService.Register(userToRegister);
+    if (registeredUser is null)
+    {
+      logger.LogError("Register user error: {err}, Message: {message}",
+        regUserError?.Error.GetEnumDescription(), regUserError?.Message
+      );
+      return BadRequest(new { message = "User registration unsuccessful" });
+    }
 
     var scopes = "read:user-info read:files";
     var (loggedInUser, err) = await authService.Login(registeredUser.UserName, user.Password, scopes);

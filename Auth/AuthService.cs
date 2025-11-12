@@ -77,27 +77,33 @@ public class AuthService : IAuthService
     return (user, null);
   }
 
-  public async Task<User> Register(User user)
+  public async Task<(User?, AuthError?)> Register(User user)
   {
     var group = new SecurityGroup
     {
       GroupName = user.UserName,
     };
-    user.Password = BCrypt.HashPassword(user.Password);
-    dbContext.Users.Add(user);
-    dbContext.SecurityGroups.Add(group);
+    var password = BCrypt.HashPassword(user.Password);
+    var existing = await dbContext.Users.FirstOrDefaultAsync(u => u.UserName == user.UserName);
+    if (existing is not null)
+    {
+      return (null, new AuthError(UserExists, "User already exists"));
+    }
+    user.Password = password;
+    await dbContext.Users.AddAsync(user);
+    await dbContext.SecurityGroups.AddAsync(group);
 
     await dbContext.SaveChangesAsync();
 
     var createdUser = await dbContext.Users.FirstOrDefaultAsync(u => u.UserName == user.UserName);
     if (createdUser is null)
     {
-      throw new Exception("User was not created");
+      return (null, new AuthError(ErrorCreatingUser, "User was not created"));
     }
 
     this.EnsureSecurityGroup(createdUser);
 
-    return user;
+    return (createdUser, null);
   }
 
   public async Task<(AuthorizeResponse?, AuthError?)> AuthorizeRequest(AuthorizationRequest authorizationRequest)
