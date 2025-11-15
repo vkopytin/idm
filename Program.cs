@@ -56,8 +56,8 @@ builder.Services.AddTransient(o =>
 {
   return new MongoDbContext(client);
 });
-builder.Services.AddSingleton<GoogleService>();
-builder.Services.AddSingleton<IAuthService, AuthService>();
+builder.Services.AddTransient<GoogleService>();
+builder.Services.AddTransient<IAuthService, AuthService>();
 builder.Services.AddTransient<IAccountService, AccountService>();
 builder.Services.AddAuthorization(options =>
 {
