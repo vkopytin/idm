@@ -11,6 +11,7 @@ namespace Auth.Db
     public DbSet<SecurityGroup> SecurityGroups { get; init; }
     public DbSet<AuthCode> AuthCodes { get; init; }
     public DbSet<AuthToken> AuthTokens { get; init; }
+    public DbSet<WebSite> WebSites { get; init; }
 
     public MongoDbContext(MongoClient client)
      : base(new DbContextOptionsBuilder<MongoDbContext>().UseMongoDB(client, "main").Options)

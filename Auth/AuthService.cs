@@ -509,18 +509,28 @@ public class AuthService : IAuthService
 
   private async Task EnsureSecurityGroup(User user)
   {
-    if (user.SecurityGroupId is not null)
+    if (user.SecurityGroupId is null)
     {
-      return;
+      var group = new SecurityGroup
+      {
+        GroupName = user.UserName,
+      };
+      await dbContext.SecurityGroups.AddAsync(group);
+      await dbContext.SaveChangesAsync();
+      user.SecurityGroupId = group.Id;
+      await dbContext.SaveChangesAsync();
     }
 
-    var group = new SecurityGroup
+    var webSite = await dbContext.WebSites.FirstOrDefaultAsync(ws => ws.UserId == user.Id);
+    if (webSite is null)
     {
-      GroupName = user.UserName,
-    };
-    await dbContext.SecurityGroups.AddAsync(group);
-    await dbContext.SaveChangesAsync();
-    user.SecurityGroupId = group.Id;
-    await dbContext.SaveChangesAsync();
+      var newWebSite = new WebSite
+      {
+        UserId = user.Id,
+        HostName = $"{user.UserName.ToLower().Replace(" ", "-")}.local"
+      };
+      await dbContext.WebSites.AddAsync(newWebSite);
+      await dbContext.SaveChangesAsync();
+    }
   }
 }
