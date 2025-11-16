@@ -417,7 +417,7 @@ public class AuthService : IAuthService
 
   private JwtSecurityToken GenerateIdToken(AuthorizationCode authorizationCode, User user)
   {
-    var tokenExpirationInMinutes = 5;
+    var tokenExpirationInMinutes = 60;
     string[] amrs = ["pwd"];
     var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
 
