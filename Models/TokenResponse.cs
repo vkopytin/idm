@@ -7,7 +7,7 @@ public record TokenResponse(
     string access_token,
     string? id_token,
     string? refresh_token,
-    string expires_in,
+    string expires_at,
     string code,
     string token_type
 )
@@ -16,9 +16,9 @@ public record TokenResponse(
       string access_token,
       string? id_token,
       string? refresh_token,
-      string expires_in,
+      string expires_at,
       string code
-  ) : this(access_token, id_token, refresh_token, expires_in, code, TokenTypeEnum.Bearer.GetEnumDescription())
+  ) : this(access_token, id_token, refresh_token, expires_at, code, TokenTypeEnum.Bearer.GetEnumDescription())
   {
 
   }

@@ -39,7 +39,7 @@ public static class MongoExtensions
     {
       AccessToken = token.AccessToken,
       RefreshToken = token.RefreshToken,
-      Expiration = DateTime.Now.AddSeconds(token.ExpiresIn),
+      Expiration = DateTime.Now.AddSeconds(token.ExpiresAt),
       TokenType = token.TokenType,
       Scopes = token.Scope.Split(' '),
     };

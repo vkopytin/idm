@@ -243,14 +243,14 @@ public class AuthService : IAuthService
     //RemoveClientDataByCode(request.Code);
 
     var since = EpochTime.GetIntDate(DateTime.Now);
-    var expiresIn = long.Parse(accessToken.Claims.First(claim => claim.Type.Equals("exp")).Value);
+    var expiresAt = long.Parse(accessToken.Claims.First(claim => claim.Type.Equals("exp")).Value);
 
     return (new(
         access_token: new JwtSecurityTokenHandler().WriteToken(accessToken),
         id_token: idToken != null ? new JwtSecurityTokenHandler().WriteToken(idToken) : null,
         refresh_token: new JwtSecurityTokenHandler().WriteToken(refreshToken),
         code: request.Code,
-        expires_in: $"{expiresIn - since}"
+        expires_at: $"{expiresAt - since}"
     ), null);
   }
 
@@ -318,7 +318,7 @@ public class AuthService : IAuthService
       expires: DateTime.UtcNow.AddMinutes(tokenExpirationInMinutes));
 
     var since = EpochTime.GetIntDate(DateTime.Now);
-    var expiresIn = long.Parse(accessToken.Claims.First(claim => claim.Type.Equals("exp")).Value);
+    var expiresAt = long.Parse(accessToken.Claims.First(claim => claim.Type.Equals("exp")).Value);
 
     return (new(
       access_token: new JwtSecurityTokenHandler().WriteToken(accessToken),
@@ -326,7 +326,7 @@ public class AuthService : IAuthService
       refresh_token: null,
       code: request.Code ?? string.Empty,
       token_type: "app_token",
-      expires_in: $"{expiresIn - since}"
+      expires_at: $"{expiresAt - since}"
     ), null);
   }
 

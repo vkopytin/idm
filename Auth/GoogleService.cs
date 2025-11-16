@@ -251,7 +251,7 @@ public class GoogleService
     }
 
     authToken.AccessToken = newToken.AccessToken;
-    authToken.Expiration = DateTime.UtcNow.AddSeconds(newToken.ExpiresIn);
+    authToken.Expiration = DateTime.UtcNow.AddSeconds(newToken.ExpiresAt);
     dbContext.AuthTokens.Update(authToken);
     await dbContext.SaveChangesAsync();
   }
