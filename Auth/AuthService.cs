@@ -250,7 +250,7 @@ public class AuthService : IAuthService
         id_token: idToken != null ? new JwtSecurityTokenHandler().WriteToken(idToken) : null,
         refresh_token: new JwtSecurityTokenHandler().WriteToken(refreshToken),
         code: request.Code,
-        expires_at: $"{expiresAt - since}"
+        expires_in: $"{expiresAt - since}"
     ), null);
   }
 
@@ -326,7 +326,7 @@ public class AuthService : IAuthService
       refresh_token: null,
       code: request.Code ?? string.Empty,
       token_type: "app_token",
-      expires_at: $"{expiresAt - since}"
+      expires_in: $"{expiresAt - since}"
     ), null);
   }
 
