@@ -1,15 +1,8 @@
-using System.Collections.Concurrent;
-using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using AppConfiguration;
 using Auth.Db;
-using Auth.Models;
 using Auth.Models.Google;
 using Idm.Models;
-using Idm.OauthRequest;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Auth.Services;

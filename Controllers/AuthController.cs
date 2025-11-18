@@ -1,4 +1,5 @@
-﻿using AppConfiguration;
+﻿using System.IdentityModel.Tokens.Jwt;
+using AppConfiguration;
 using Auth;
 using Auth.Models;
 using Auth.Services;
@@ -10,7 +11,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using System.IdentityModel.Tokens.Jwt;
 
 namespace Controllers;
 

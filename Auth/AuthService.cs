@@ -1,16 +1,16 @@
-﻿using Auth.Db;
-using Auth.Models;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Idm.Models;
-using Microsoft.EntityFrameworkCore;
 using AppConfiguration;
+using Auth.Db;
 using Auth.Errors;
+using Auth.Models;
 using Idm.Common;
+using Idm.Models;
 using Idm.OauthRequest;
 using Idm.OauthResponse;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Auth;
 

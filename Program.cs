@@ -1,4 +1,5 @@
-﻿using AppConfiguration;
+﻿using System.Text;
+using AppConfiguration;
 using Auth;
 using Auth.Db;
 using Auth.Services;
@@ -10,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.Text;
 
 IdentityModelEventSource.ShowPII = true;
 
