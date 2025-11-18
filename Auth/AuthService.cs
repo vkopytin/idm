@@ -15,7 +15,7 @@ using Microsoft.IdentityModel.Tokens;
 namespace Auth;
 
 using BCrypt.Net;
-
+using Dapper;
 using static Idm.OauthResponse.ErrorTypeEnum;
 
 public class AuthService : IAuthService
@@ -248,7 +248,7 @@ public class AuthService : IAuthService
 
     // toDO: find how to here remove the code from the Concurrent Dictionary
     // and use for google token renew another approach
-    await RemoveClientDataByCode(request.Code);
+    //await RemoveClientDataByCode(request.Code);
 
     var since = EpochTime.GetIntDate(DateTime.Now);
     var expiresAt = long.Parse(accessToken.Claims.First(claim => claim.Type.Equals("exp")).Value);
