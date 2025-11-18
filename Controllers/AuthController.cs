@@ -342,6 +342,7 @@ public class AuthController : ControllerBase
       try
       {
         await this.googleService.RefreshGoogleTokenIfNeeded(refreshTokenResult.code);
+        await authService.RemoveClientDataByCode(refreshTokenResult.code);
       }
       catch (Exception ex)
       {
@@ -364,6 +365,7 @@ public class AuthController : ControllerBase
     try
     {
       await this.googleService.RefreshGoogleTokenIfNeeded(tokenResult.code);
+      await authService.RemoveClientDataByCode(tokenResult.code);
     }
     catch (Exception ex)
     {

@@ -338,6 +338,22 @@ public class AuthService : IAuthService
     ), null);
   }
 
+  public async Task<AuthorizationCode?> RemoveClientDataByCode(string key)
+  {
+    using var connection = await dbConnectionFactory.CreateConnectionAsync();
+    var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
+    if (existing is null)
+    {
+      return null;
+    }
+
+    var authorizationCode = AuthorizationCode.FromModel(existing);
+    dbContext.AuthCodes.Remove(existing);
+    await dbContext.SaveChangesAsync();
+
+    return authorizationCode;
+  }
+
   private async Task<string> GenerateAuthorizationCode(Client client, IEnumerable<string> requestedScope, string nonce)
   {
     var code = Guid.NewGuid();
@@ -372,22 +388,6 @@ public class AuthService : IAuthService
     }
 
     return null;
-  }
-
-  private async Task<AuthorizationCode?> RemoveClientDataByCode(string key)
-  {
-    using var connection = await dbConnectionFactory.CreateConnectionAsync();
-    var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
-    if (existing is null)
-    {
-      return null;
-    }
-
-    var authorizationCode = AuthorizationCode.FromModel(existing);
-    dbContext.AuthCodes.Remove(existing);
-    await dbContext.SaveChangesAsync();
-
-    return authorizationCode;
   }
 
   private async Task<(Client?, AuthError?)> VerifyClientById(string clientId, bool checkWithSecret = false, string? clientSecret = null)

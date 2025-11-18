@@ -16,4 +16,5 @@ public interface IAuthService
   Task<(TokenResponse?, AuthError?)> GenerateToken(TokenRequest request);
   Task<(TokenResponse?, AuthError?)> GenerateAppToken(TokenRequest request);
   Task<(TokenResponse?, AuthError?)> RefreshToken(string clientId, string refreshToken);
+  Task<AuthorizationCode?> RemoveClientDataByCode(string key);
 }
