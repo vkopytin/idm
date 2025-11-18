@@ -363,7 +363,7 @@ public class AuthService : IAuthService
         ClientId: client.ClientId,
         ClientSecret: client.ClientSecret,
         RedirectUri: client.RedirectUri,
-        OpenId: string.Empty,
+        OpenId: client.SecurityGroupId.ToString() ?? string.Empty,
         RequestedScopes: requestedScope.ToArray(),
         CreationTime: DateTime.Now,
         Nonce: nonce
