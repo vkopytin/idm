@@ -460,7 +460,7 @@ public class AuthService : IAuthService
 
   private JwtSecurityToken GenerateAccessToken(AuthorizationCode authorizationCode, string clientUri, string userRole)
   {
-    var tokenExpirationInMinutes = 5;
+    var tokenExpirationInMinutes = 60;
     var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authorizationCode.ClientSecret));
     var clientCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
     var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
