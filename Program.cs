@@ -21,6 +21,7 @@ var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? throw new Exception("apps
 var jwtAudience = builder.Configuration["JWT:Audience"] ?? throw new Exception("appsettings config error: JWT audience is not specified");
 var apiCorsPolicy = "ApiCorsPolicy";
 
+builder.Services.AddSingleton<IDbConnectionFactory, NpgsqlDbConnectionFactory>();
 builder.Services.AddSingleton(p => p.GetRequiredService<IConfiguration>()
   .Get<MainSettings>() ?? throw new Exception("appsettings are missing")
 );

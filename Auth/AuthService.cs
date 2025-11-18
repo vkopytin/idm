@@ -21,12 +21,19 @@ using static Idm.OauthResponse.ErrorTypeEnum;
 public class AuthService : IAuthService
 {
   private readonly MongoDbContext dbContext;
+  private readonly IDbConnectionFactory dbConnectionFactory;
   private readonly IAccountService accountService;
   private readonly JwtOptions jwtOptions;
 
-  public AuthService(MongoDbContext dbContext, IAccountService accountService, JwtOptions options)
+  public AuthService(
+    MongoDbContext dbContext,
+    IDbConnectionFactory dbConnectionFactory,
+    IAccountService accountService,
+    JwtOptions options
+  )
   {
     this.dbContext = dbContext;
+    this.dbConnectionFactory = dbConnectionFactory;
     jwtOptions = options;
     this.accountService = accountService;
   }
@@ -176,6 +183,7 @@ public class AuthService : IAuthService
       return (null, new(InvalidScope));
     }
 
+    using var connection = await dbConnectionFactory.CreateConnectionAsync();
     var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
 
     if (existing is null)
@@ -240,7 +248,7 @@ public class AuthService : IAuthService
 
     // toDO: find how to here remove the code from the Concurrent Dictionary
     // and use for google token renew another approach
-    //RemoveClientDataByCode(request.Code);
+    await RemoveClientDataByCode(request.Code);
 
     var since = EpochTime.GetIntDate(DateTime.Now);
     var expiresAt = long.Parse(accessToken.Claims.First(claim => claim.Type.Equals("exp")).Value);
@@ -347,6 +355,7 @@ public class AuthService : IAuthService
 
     var record = authoCode.ToModel();
     record.Id = code;
+    using var connection = await dbConnectionFactory.CreateConnectionAsync();
     await dbContext.AuthCodes.AddAsync(record);
     await dbContext.SaveChangesAsync();
 
@@ -355,6 +364,7 @@ public class AuthService : IAuthService
 
   private async Task<AuthorizationCode?> GetClientDataByCode(string key)
   {
+    using var connection = await dbConnectionFactory.CreateConnectionAsync();
     var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
     if (existing is not null)
     {
@@ -364,9 +374,10 @@ public class AuthService : IAuthService
     return null;
   }
 
-  private AuthorizationCode? RemoveClientDataByCode(string key)
+  private async Task<AuthorizationCode?> RemoveClientDataByCode(string key)
   {
-    var existing = dbContext.AuthCodes.Find(Guid.Parse(key));
+    using var connection = await dbConnectionFactory.CreateConnectionAsync();
+    var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
     if (existing is null)
     {
       return null;
@@ -374,7 +385,7 @@ public class AuthService : IAuthService
 
     var authorizationCode = AuthorizationCode.FromModel(existing);
     dbContext.AuthCodes.Remove(existing);
-    dbContext.SaveChanges();
+    await dbContext.SaveChangesAsync();
 
     return authorizationCode;
   }
@@ -449,7 +460,7 @@ public class AuthService : IAuthService
 
   private JwtSecurityToken GenerateAccessToken(AuthorizationCode authorizationCode, string clientUri, string userRole)
   {
-    var tokenExpirationInMinutes = 60;
+    var tokenExpirationInMinutes = 5;
     var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authorizationCode.ClientSecret));
     var clientCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
     var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
