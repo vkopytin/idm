@@ -5,18 +5,17 @@ using AppConfiguration;
 using Auth.Db;
 using Auth.Errors;
 using Auth.Models;
+using Dapper;
 using Idm.Common;
 using Idm.Models;
 using Idm.OauthRequest;
 using Idm.OauthResponse;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using static Idm.OauthResponse.ErrorTypeEnum;
+using Crypt = BCrypt.Net.BCrypt;
 
 namespace Auth;
-
-using BCrypt.Net;
-using Dapper;
-using static Idm.OauthResponse.ErrorTypeEnum;
 
 public class AuthService : IAuthService
 {
@@ -46,7 +45,7 @@ public class AuthService : IAuthService
       return (null, new AuthError(AccessDenied, "login not found"));
     }
 
-    if (BCrypt.Verify(password, user.Password) == false)
+    if (Crypt.Verify(password, user.Password) == false)
     {
       return (null, new AuthError(AccessDeniedInvalidPassword, "wrong password"));
     }
@@ -87,7 +86,7 @@ public class AuthService : IAuthService
     {
       GroupName = user.UserName,
     };
-    var password = BCrypt.HashPassword(user.Password);
+    var password = Crypt.HashPassword(user.Password);
     var existing = await dbContext.Users.FirstOrDefaultAsync(u => u.UserName == user.UserName);
     if (existing is not null)
     {
