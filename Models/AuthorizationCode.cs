@@ -28,7 +28,7 @@ public record AuthorizationCode
       ClientId: existing.ClientId,
       ClientSecret: existing.ClientSecret,
       RedirectUri: existing.RedirectUri,
-      RequestedScopes: existing.RequestedScopes,
+      RequestedScopes: existing.RequestedScopes.Split(','),
       CreationTime: existing.CreationTime,
       Nonce: existing.Nonce,
       OpenId: existing.OpenId,

@@ -14,7 +14,7 @@ public class AuthCode
   public string ClientSecret { get; set; }
   public string RedirectUri { get; set; }
 
-  public string[] RequestedScopes { get; set; }
+  public string RequestedScopes { get; set; }
   public DateTime CreationTime { get; set; }
 
   public string Nonce { get; set; }

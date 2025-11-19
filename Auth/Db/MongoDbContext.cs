@@ -9,7 +9,7 @@ namespace Auth.Db
   {
     public DbSet<User> Users { get; init; }
     public DbSet<SecurityGroup> SecurityGroups { get; init; }
-    public DbSet<AuthCode> AuthCodes { get; init; }
+    //public DbSet<AuthCode> AuthCodes { get; init; }
     public DbSet<AuthToken> AuthTokens { get; init; }
     public DbSet<WebSite> WebSites { get; init; }
 
@@ -24,7 +24,7 @@ namespace Auth.Db
       base.OnModelCreating(modelBuilder);
       modelBuilder.Entity<User>().ToCollection("users");
       modelBuilder.Entity<SecurityGroup>().ToCollection("securityGroups");
-      modelBuilder.Entity<AuthCode>().ToCollection("authCodes");
+      //modelBuilder.Entity<AuthCode>().ToCollection("authCodes");
       modelBuilder.Entity<AuthToken>().ToCollection("authTokens");
     }
   }

@@ -4,6 +4,8 @@ using Auth.Db;
 using Auth.Models.Google;
 using Idm.Models;
 using Microsoft.EntityFrameworkCore;
+using Dapper;
+using Auth.Models;
 
 namespace Auth.Services;
 
@@ -25,16 +27,19 @@ record Source(string Type, string Id);
 public class GoogleService
 {
   private readonly MongoDbContext dbContext;
+  private readonly IDbConnectionFactory dbConnectionFactory;
   private readonly HttpClient httpClient;
   private readonly MainSettings settings;
 
   public GoogleService(
     MongoDbContext dbContext,
+    IDbConnectionFactory dbConnectionFactory,
     HttpClient httpClient,
     MainSettings settings
   )
   {
     this.dbContext = dbContext;
+    this.dbConnectionFactory = dbConnectionFactory;
     this.httpClient = httpClient;
     this.settings = settings;
   }
@@ -53,11 +58,26 @@ public class GoogleService
       BackUrl: backUrl
     );
 
-    var dbEntity = dbContext.AuthCodes.Add(authoCode.ToModel());
+    var dbEntity = authoCode.ToModel();
+    using var connection = await dbConnectionFactory.CreateConnectionAsync();
+    await connection.ExecuteAsync(
+      """
+      INSERT INTO AuthCodes (Id, ClientId, ClientSecret, RedirectUri, RequestedScopes, CreationTime, Nonce, OpenId, UserId, IsOpenId, BackUrl)
+      VALUES (@Id, @ClientId, @ClientSecret, @RedirectUri, @RequestedScopes, @CreationTime, @Nonce, @OpenId, @UserId, @IsOpenId, @BackUrl)
+      """,
+      dbEntity
+    );
+
+    dbEntity = connection.QuerySingle<AuthCode>(
+      """
+      SELECT * FROM AuthCodes WHERE Id = @Id
+      """,
+      new { Id = dbEntity.Id }
+    );
 
     await dbContext.SaveChangesAsync();
 
-    return dbEntity.Entity.Id.ToString();
+    return dbEntity.Id.ToString();
   }
 
   public async Task<string> BuildAuthUrl(string openId, string? backUrl = null)
@@ -89,7 +109,13 @@ public class GoogleService
 
   public async Task<(TokenResponse? response, string? error)> GetAccessTokenAsync(string code, string state)
   {
-    var authCode = await dbContext.AuthCodes.FindAsync(Guid.Parse(state));
+    using var connection = await dbConnectionFactory.CreateConnectionAsync();
+    var authCode = await connection.QueryFirstOrDefaultAsync<AuthCode>(
+      """
+      SELECT * FROM AuthCodes WHERE Id = @Id
+      """,
+      new { Id = Guid.Parse(state) }
+    );
     if (authCode is null)
     {
       return (null, "Invalid state parameter.");
@@ -192,7 +218,13 @@ public class GoogleService
 
   public async Task RefreshGoogleTokenIfNeeded(string code)
   {
-    var authCode = await dbContext.AuthCodes.FindAsync(Guid.Parse(code));
+    using var connection = await dbConnectionFactory.CreateConnectionAsync();
+    var authCode = await connection.QueryFirstOrDefaultAsync<AuthCode>(
+      """
+      SELECT * FROM AuthCodes WHERE Id = @Id
+      """,
+      new { Id = Guid.Parse(code) }
+    );
     if (authCode is null)
     {
       return;

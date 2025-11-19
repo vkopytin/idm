@@ -25,7 +25,7 @@ public static class MongoExtensions
       RedirectUri = code.RedirectUri,
       Nonce = code.Nonce,
       OpenId = code.OpenId,
-      RequestedScopes = code.RequestedScopes.ToArray(),
+      RequestedScopes = string.Join(',', code.RequestedScopes),
       CreationTime = code.CreationTime,
       UserId = code.UserId,
       IsOpenId = !string.IsNullOrEmpty(code.OpenId),

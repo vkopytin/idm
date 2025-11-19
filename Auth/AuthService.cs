@@ -184,7 +184,12 @@ public class AuthService : IAuthService
     }
 
     using var connection = await dbConnectionFactory.CreateConnectionAsync();
-    var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
+    var existing = await connection.QueryFirstOrDefaultAsync<AuthCode>(
+      """
+      SELECT * FROM AuthCodes WHERE Id = @Id
+      """,
+      new { Id = Guid.Parse(key) }
+    );
 
     if (existing is null)
     {
@@ -192,13 +197,23 @@ public class AuthService : IAuthService
     }
 
     existing.IsOpenId = true;
-    existing.RequestedScopes = requestdScopes.ToArray();
+    existing.RequestedScopes = string.Join(',', requestdScopes);
     existing.Nonce = nonce;
     existing.UserId = user.UserName;
     existing.OpenId = user.SecurityGroupId.ToString() ?? "";
 
-    dbContext.AuthCodes.Update(existing);
-    await dbContext.SaveChangesAsync();
+    await connection.ExecuteAsync(
+      """
+      UPDATE AuthCodes
+      SET RequestedScopes = @RequestedScopes,
+          IsOpenId = @IsOpenId,
+          Nonce = @Nonce,
+          OpenId = @OpenId,
+          UserId = @UserId
+      WHERE Id = @Id
+      """,
+      existing
+    );
 
     return (AuthorizationCode.FromModel(existing), null);
   }
@@ -341,15 +356,25 @@ public class AuthService : IAuthService
   public async Task<AuthorizationCode?> RemoveClientDataByCode(string key)
   {
     using var connection = await dbConnectionFactory.CreateConnectionAsync();
-    var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
+    var existing = await connection.QueryFirstOrDefaultAsync<AuthCode>(
+      """
+      SELECT * FROM AuthCodes WHERE Id = @Id
+      """,
+      new { Id = Guid.Parse(key) }
+    );
+
     if (existing is null)
     {
       return null;
     }
 
     var authorizationCode = AuthorizationCode.FromModel(existing);
-    dbContext.AuthCodes.Remove(existing);
-    await dbContext.SaveChangesAsync();
+    await connection.ExecuteAsync(
+      """
+      DELETE FROM AuthCodes WHERE Id = @Id
+      """,
+      new { Id = existing.Id }
+    );
 
     return authorizationCode;
   }
@@ -372,8 +397,13 @@ public class AuthService : IAuthService
     var record = authoCode.ToModel();
     record.Id = code;
     using var connection = await dbConnectionFactory.CreateConnectionAsync();
-    await dbContext.AuthCodes.AddAsync(record);
-    await dbContext.SaveChangesAsync();
+    await connection.ExecuteAsync(
+      """
+      INSERT INTO AuthCodes (Id, ClientId, ClientSecret, RedirectUri, RequestedScopes, CreationTime, Nonce, OpenId, IsOpenId)
+      VALUES (@Id, @ClientId, @ClientSecret, @RedirectUri, @RequestedScopes, @CreationTime, @Nonce, @OpenId, @IsOpenId)
+      """,
+      record
+    );
 
     return code.ToString();
   }
@@ -381,7 +411,12 @@ public class AuthService : IAuthService
   private async Task<AuthorizationCode?> GetClientDataByCode(string key)
   {
     using var connection = await dbConnectionFactory.CreateConnectionAsync();
-    var existing = await dbContext.AuthCodes.FindAsync(Guid.Parse(key));
+    var existing = await connection.QueryFirstOrDefaultAsync<AuthCode>(
+      """
+      SELECT * FROM AuthCodes WHERE Id = @Id
+      """,
+      new { Id = Guid.Parse(key) }
+    );
     if (existing is not null)
     {
       return AuthorizationCode.FromModel(existing);
@@ -460,7 +495,7 @@ public class AuthService : IAuthService
 
   private JwtSecurityToken GenerateAccessToken(AuthorizationCode authorizationCode, string clientUri, string userRole)
   {
-    var tokenExpirationInMinutes = 60;
+    var tokenExpirationInMinutes = 5;
     var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(authorizationCode.ClientSecret));
     var clientCredentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
     var iat = (int)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
